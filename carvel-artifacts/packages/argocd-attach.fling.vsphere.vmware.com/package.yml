@@ -5,14 +5,14 @@ metadata:
   name: argocd-attach.fling.vsphere.vmware.com.1.0.0
 spec:
   refName: argocd-attach.fling.vsphere.vmware.com
-  releasedAt: "2025-06-11T21:46:10Z"
+  releasedAt: "2025-06-11T21:55:56Z"
   template:
     spec:
       deploy:
       - kapp: {}
       fetch:
       - imgpkgBundle:
-          image: ghcr.io/warroyo/argocd-auto-attach@sha256:d0d7695512267ec3eb5b0f6b6487e39c1eea1fdd9fb4bcacf2f7a5a1037d875c
+          image: ghcr.io/warroyo/argocd-auto-attach@sha256:e64f6fff66c02863c2099c797c12426cd547a1e6b46c10112bef9d0cd0bf5f15
       template:
       - helmTemplate:
           name: metacontroller
