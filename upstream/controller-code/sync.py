@@ -21,7 +21,7 @@ class Controller(BaseHTTPRequestHandler):
         if len(related['Secret.v1']) == 0:
             LOGGER.info("no secrets match required name")
             return []
-        elif "argocd-attach.field.vmware.com" not in object['metadata']['labels']:
+        elif "argocd-attach" not in object['metadata']['labels']:
             LOGGER.info("attach label is not on cluster skipping attach")
             return []
         else:
