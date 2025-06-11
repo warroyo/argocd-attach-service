@@ -40,6 +40,9 @@ spec:
         - /hooks/sync.py
         image: #@ data.values.python_image
         name: controller
+        env:
+        - name: ARGO_NS
+          value: #@ data.values.argo_namespace
         volumeMounts:
         - mountPath: /hooks
           name: hooks
