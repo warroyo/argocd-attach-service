@@ -1,0 +1,63 @@
+apiVersion: data.packaging.carvel.dev/v1alpha1
+kind: Package
+metadata:
+  creationTimestamp: null
+  name: argocd-attach.fling.vsphere.vmware.com.0.0.0
+spec:
+  refName: argocd-attach.fling.vsphere.vmware.com
+  releasedAt: null
+  template:
+    spec:
+      deploy:
+      - kapp: {}
+      fetch:
+      - git: {}
+      template:
+      - helmTemplate:
+          path: upstream
+      - ytt:
+          paths:
+          - 'config'
+      - kbld: {}
+  valuesSchema:
+    openAPIv3:
+      additionalProperties: false
+      properties:
+        namespace:
+          default: ""
+          type: string
+        python_image:
+          default: python:3.13
+          type: string
+      type: object
+  version: 0.0.0
+
+---
+apiVersion: data.packaging.carvel.dev/v1alpha1
+kind: PackageMetadata
+metadata:
+  creationTimestamp: null
+  name: argocd-attach.fling.vsphere.vmware.com
+spec:
+  displayName: argocd-attach
+  longDescription: argocd-attach.fling.vsphere.vmware.com
+  shortDescription: argocd-attach.fling.vsphere.vmware.com
+
+---
+apiVersion: packaging.carvel.dev/v1alpha1
+kind: PackageInstall
+metadata:
+  annotations:
+    kctrl.carvel.dev/local-fetch-0: .
+  creationTimestamp: null
+  name: argocd-attach
+spec:
+  packageRef:
+    refName: argocd-attach.fling.vsphere.vmware.com
+    versionSelection:
+      constraints: 0.0.0
+  serviceAccountName: argocd-attach-sa
+status:
+  conditions: null
+  friendlyDescription: ""
+  observedGeneration: 0

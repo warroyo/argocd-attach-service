@@ -1,0 +1,102 @@
+rbac:
+  create: true
+
+image:
+  repository: localhost/metacontroller
+  pullPolicy: IfNotPresent
+  tag: "dev"
+
+imagePullSecrets: []
+nameOverride: ""
+namespaceOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext: {}
+  # fsGroup: 65532
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 65532
+
+resources: {}
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+# Command which is used to start metacontroller
+command: "/usr/bin/metacontroller"
+
+# Command arguments which are used to start metacontroller
+commandArgs:
+  - --zap-log-level=4
+  - --discovery-interval=20s
+  - --cache-flush-interval=30m
+
+# The name of the PriorityClass that will be assigned to metacontroller
+priorityClassName: ""
+
+clusterRole:
+  aggregationRule: {}
+  rules:
+  - apiGroups:
+      - "apps"
+    resources:
+      - "statefulsets"
+    verbs:
+      - "get"
+      - "watch"
+      - "list"
+  - apiGroups:
+      - ""
+    resources:
+      - "services"
+    verbs:
+      - "get"
+      - "watch"
+      - "list"
+      - "create"
+      - "delete"
+  - apiGroups:
+      - ""
+    resources:
+      - "events"
+    verbs:
+      - "create"
+      - "patch"
+  - apiGroups:
+      - "metacontroller.k8s.io"
+    resources:
+      - "*"
+    verbs:
+      - "get"
+      - "watch"
+      - "list"
+
+replicas: 1
+
+# podDisruptionBudget which can be enabled when running more than one replica
+podDisruptionBudget: {}
+  # minAvailable: 1
+  # maxUnavailable: 0

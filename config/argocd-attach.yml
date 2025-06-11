@@ -1,0 +1,72 @@
+#@ load("@ytt:data", "data")
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-attach-sync
+  namespace: #@ data.values.namespace
+data:
+  sync.py: #@ data.read("sync.py")
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: argocd-attach-controller
+  namespace: #@ data.values.namespace
+spec:
+  ports:
+  - port: 80
+  selector:
+    app: argocd-attach-controller
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: argocd-attach-controller
+  namespace: #@ data.values.namespace
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: argocd-attach-controller
+  template:
+    metadata:
+      labels:
+        app: argocd-attach-controller
+    spec:
+      containers:
+      - command:
+        - python
+        - /hooks/sync.py
+        image: #@ data.values.python_image
+        name: controller
+        volumeMounts:
+        - mountPath: /hooks
+          name: hooks
+      volumes:
+      - configMap:
+          name: argocd-attach-sync
+        name: hooks
+---
+apiVersion: metacontroller.k8s.io/v1alpha1
+kind: DecoratorController
+metadata:
+  name: argocd-attach-cluster
+  namespace:  #@ data.values.namespace
+spec:
+  attachments:
+  - apiVersion: v1
+    resource: secrets
+    updateStrategy:
+      method: InPlace
+  hooks:
+    customize:
+      webhook:
+        url: http://argocd-attach-controller/customize
+    sync:
+      webhook:
+        url: http://argocd-attach-controller/sync
+  resources:
+  - apiVersion: cluster.x-k8s.io/v1beta1
+    resource: clusters
+  resyncPeriodSeconds: 60

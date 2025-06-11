@@ -1,0 +1,9 @@
+apiVersion: data.packaging.carvel.dev/v1alpha1
+kind: PackageMetadata
+metadata:
+  creationTimestamp: null
+  name: argocd-attach.fling.vsphere.vmware.com
+spec:
+  displayName: argocd-attach
+  longDescription: argocd-attach.fling.vsphere.vmware.com
+  shortDescription: argocd-attach.fling.vsphere.vmware.com

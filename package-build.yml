@@ -1,0 +1,29 @@
+apiVersion: kctrl.carvel.dev/v1alpha1
+kind: PackageBuild
+metadata:
+  creationTimestamp: null
+  name: argocd-attach.fling.vsphere.vmware.com
+spec:
+  release:
+  - resource: {}
+  template:
+    spec:
+      app:
+        spec:
+          deploy:
+          - kapp: {}
+          template:
+          - helmTemplate:
+              path: upstream
+          - ytt:
+              paths:
+              - '-'
+              - config
+          - kbld: {}
+      export:
+      - imgpkgBundle:
+          image: ghcr.io/warroyo/argocd-auto-attach
+          useKbldImagesLock: true
+        includePaths:
+        - upstream
+        - config

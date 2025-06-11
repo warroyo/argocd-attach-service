@@ -1,0 +1,183 @@
+apiVersion: data.packaging.carvel.dev/v1alpha1
+kind: PackageMetadata
+metadata:
+  creationTimestamp: null
+  name: argocd-attach.fling.vsphere.vmware.com
+spec:
+  displayName: argocd-attach
+  longDescription: argocd-attach.fling.vsphere.vmware.com
+  shortDescription: argocd-attach.fling.vsphere.vmware.com
+
+---
+apiVersion: data.packaging.carvel.dev/v1alpha1
+kind: Package
+metadata:
+  creationTimestamp: null
+  name: argocd-attach.fling.vsphere.vmware.com.1.0.0
+spec:
+  refName: argocd-attach.fling.vsphere.vmware.com
+  releasedAt: "2025-06-11T17:24:52Z"
+  template:
+    spec:
+      deploy:
+      - kapp: {}
+      fetch:
+      - imgpkgBundle:
+          image: ghcr.io/warroyo/argocd-auto-attach@sha256:7e5cf57fc8e51b6b87ddda0719ed66d6adcf4509f2ddfdbe6aba5a7267a28bb6
+      template:
+      - helmTemplate:
+          path: upstream
+      - ytt:
+          paths:
+          - '-'
+          - config
+      - kbld:
+          paths:
+          - '-'
+          - .imgpkg/images.yml
+  valuesSchema:
+    openAPIv3:
+      properties:
+        affinity:
+          default: {}
+          type: object
+        clusterRole:
+          properties:
+            aggregationRule:
+              default: {}
+              type: object
+            rules:
+              default: []
+              items:
+                properties:
+                  apiGroups:
+                    default: []
+                    items:
+                      default: '*'
+                      type: string
+                    type: array
+                  resources:
+                    default: []
+                    items:
+                      default: '*'
+                      type: string
+                    type: array
+                  verbs:
+                    default: []
+                    items:
+                      default: '*'
+                      type: string
+                    type: array
+                type: object
+              type: array
+          type: object
+        command:
+          default: /usr/bin/metacontroller
+          description: Command which is used to start metacontroller
+          type: string
+        commandArgs:
+          default: []
+          description: Command arguments which are used to start metacontroller
+          items:
+            default: --zap-log-level=4
+            type: string
+          type: array
+        fullnameOverride:
+          default: ""
+          type: string
+        image:
+          properties:
+            pullPolicy:
+              default: IfNotPresent
+              type: string
+            repository:
+              default: ghcr.io/metacontroller/metacontroller
+              type: string
+            tag:
+              default: ""
+              type: string
+          type: object
+        imagePullSecrets:
+          default: []
+          items: {}
+          type: array
+        nameOverride:
+          default: ""
+          type: string
+        namespace:
+          default: ""
+          type: string
+        namespaceOverride:
+          default: metacontroller
+          type: string
+        nodeSelector:
+          default: {}
+          type: object
+        podAnnotations:
+          default: {}
+          type: object
+        podDisruptionBudget:
+          default: {}
+          description: which can be enabled when running more than one replica
+          type: object
+        podSecurityContext:
+          default: {}
+          type: object
+        priorityClassName:
+          default: ""
+          description: The name of the PriorityClass that will be assigned to metacontroller
+          type: string
+        probes:
+          properties:
+            port:
+              default: 8081
+              type: integer
+          type: object
+        python_image:
+          default: python:3.13
+          type: string
+        rbac:
+          properties:
+            create:
+              default: true
+              type: boolean
+          type: object
+        replicas:
+          default: 1
+          type: integer
+        resources:
+          default: {}
+          type: object
+        securityContext:
+          default: {}
+          type: object
+        service:
+          properties:
+            enabled:
+              default: false
+              type: boolean
+            ports:
+              default: []
+              items: {}
+              type: array
+          type: object
+        serviceAccount:
+          properties:
+            annotations:
+              default: {}
+              type: object
+            create:
+              default: true
+              type: boolean
+            name:
+              default: ""
+              description: The name of the service account to use. If not set and
+                create is true, a name is generated using the fullname template
+              type: string
+          type: object
+        tolerations:
+          default: []
+          items: {}
+          type: array
+      type: object
+  version: 1.0.0

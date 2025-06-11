@@ -1,0 +1,5 @@
+#@data/values-schema
+---
+
+python_image: python:3.13
+namespace: ""

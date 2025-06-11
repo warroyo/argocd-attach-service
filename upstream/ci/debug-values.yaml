@@ -1,0 +1,83 @@
+rbac:
+  create: true
+
+image:
+  repository: localhost/metacontroller
+  pullPolicy: IfNotPresent
+  tag: "debug"
+
+imagePullSecrets: []
+nameOverride: ""
+namespaceOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext: {}
+  # fsGroup: 65532
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 65532
+
+resources: {}
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+# Command which is used to start metacontroller
+command: "/dlv"
+
+# Command arguments which are used to start metacontroller
+commandArgs:
+  - --listen=:40000
+  - --headless=true
+  - --api-version=2
+  - --continue            # start immediately without waiting for debug client connection
+  - --accept-multiclient  # see https://github.com/go-delve/delve/blob/master/Documentation/faq.md
+  - exec
+  - /usr/bin/metacontroller
+  - --
+  - --zap-log-level=4
+  - --discovery-interval=20s
+  - --zap-devel=true
+
+# The name of the PriorityClass that will be assigned to metacontroller
+priorityClassName: ""
+
+clusterRole:
+  aggregationRule: {}
+  rules:
+  - apiGroups:
+      - "*"
+    resources:
+      - "*"
+    verbs:
+      - "*"
+
+replicas: 1
+
+# podDisruptionBudget which can be enabled when running more than one replica
+podDisruptionBudget: {}
+  # minAvailable: 1
+  # maxUnavailable: 0
