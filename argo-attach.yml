@@ -16,7 +16,7 @@ metadata:
   name: argocd-attach.fling.vsphere.vmware.com.1.0.0
 spec:
   refName: argocd-attach.fling.vsphere.vmware.com
-  releasedAt: "2025-06-11T22:06:31Z"
+  releasedAt: "2025-06-11T22:18:28Z"
   template:
     spec:
       deploy:
