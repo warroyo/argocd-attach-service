@@ -4,3 +4,10 @@
 ---
 metadata:
   namespace: {{.Values.namespace}}
+
+#@overlay/match by=overlay.subset({"kind": "ClusterRoleBinding"}), expects="1+"
+---
+subjects:
+  #@overlay/match by="name"
+- name: {{ include "metacontroller.fullname" . }}
+  namespace: {{.Values.namespace}}
