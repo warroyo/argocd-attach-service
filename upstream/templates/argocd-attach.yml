@@ -35,9 +35,8 @@ spec:
         app: argocd-attach-controller
     spec:
       containers:
-      - command:
-        - python
-        - /hooks/sync.py
+        command: ["/bin/sh","-c"]
+        args: ["pip install yaml; python /hooks/sync.py"]
         image: {{ .Values.python_image }}
         name: controller
         env:
