@@ -1,18 +1,18 @@
-#@ load("@ytt:data", "data")
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: argocd-attach-sync
-  namespace: #@ data.values.namespace
+  namespace: {{ include "metacontroller.namespace" . }}
 data:
-  sync.py: #@ data.read("sync.py")
+  sync.py: |-
+    {{ .Files.Get "controller-code/sync.py" | nindent 4 }} 
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: argocd-attach-controller
-  namespace: #@ data.values.namespace
+  namespace: {{ include "metacontroller.namespace" . }}
 spec:
   ports:
   - port: 80
@@ -23,7 +23,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: argocd-attach-controller
-  namespace: #@ data.values.namespace
+  namespace: {{ include "metacontroller.namespace" . }}
 spec:
   replicas: 1
   selector:
@@ -38,11 +38,11 @@ spec:
       - command:
         - python
         - /hooks/sync.py
-        image: #@ data.values.python_image
+        image: {{ .Values.python_image }}
         name: controller
         env:
         - name: ARGO_NS
-          value: #@ data.values.argo_namespace
+          value: {{ .Values.argo_namespace }}
         volumeMounts:
         - mountPath: /hooks
           name: hooks
@@ -55,7 +55,7 @@ apiVersion: metacontroller.k8s.io/v1alpha1
 kind: DecoratorController
 metadata:
   name: argocd-attach-cluster
-  namespace:  #@ data.values.namespace
+  namespace:  {{ include "metacontroller.namespace" . }}
 spec:
   attachments:
   - apiVersion: v1

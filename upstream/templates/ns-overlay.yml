@@ -1,7 +1,6 @@
-#@ load("@ytt:data", "data")
 #@ load("@ytt:overlay", "overlay")
 
 #@overlay/match by=overlay.subset({"metadata": {"namespace": "metacontroller"}}), expects="1+"
 ---
 metadata:
-  namespace: #@ data.values.namespace
+  namespace: {{.Values.namespace}}

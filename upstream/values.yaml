@@ -15,7 +15,7 @@ image:
 imagePullSecrets: []
 nameOverride: ""
 namespaceOverride: "metacontroller"
-fullnameOverride: "metacontroller"
+fullnameOverride: ""
 
 serviceAccount:
   create: true

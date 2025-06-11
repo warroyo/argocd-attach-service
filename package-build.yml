@@ -14,11 +14,12 @@ spec:
           - kapp: {}
           template:
           - helmTemplate:
+              name: metacontroller
               path: upstream
           - ytt:
+              ignoreUnknownComments: true
               paths:
               - '-'
-              - config
           - kbld: {}
       export:
       - imgpkgBundle:
@@ -26,4 +27,3 @@ spec:
           useKbldImagesLock: true
         includePaths:
         - upstream
-        - config

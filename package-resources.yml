@@ -17,19 +17,9 @@ spec:
           path: upstream
       - ytt:
           paths:
-          - 'config'
+          - "-"
       - kbld: {}
-  valuesSchema:
-    openAPIv3:
-      additionalProperties: false
-      properties:
-        namespace:
-          default: ""
-          type: string
-        python_image:
-          default: python:3.13
-          type: string
-      type: object
+  valuesSchema: null
   version: 0.0.0
 
 ---

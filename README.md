@@ -16,7 +16,8 @@ ArgoCD currently runs centralized in the supervisor cluster. When deploying work
 
 
 ## Development
-
+ 
+Due to a limitation with Carvel, the custom controller needs to be included with the helm templates. That is why the helm templates have extra files when compared to looking at upstream metacontroller.
 
 ### Releasing
 
