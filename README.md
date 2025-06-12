@@ -1,6 +1,6 @@
 # ArgoCD auto Attach Service
 
-This supervisor service can be used to automatically add workload clusters to ArgoCD as they are deployed or after the fact by using a label on the cluster. 
+This supervisor service can be used to automatically add workload clusters to ArgoCD as they are deployed or after the fact by using a label on the cluster. This is currently paired with this [ArgoCD service](https://vsphere-tmm.github.io/Supervisor-Services/#argocd-operator).
 
 
 ## How it works
@@ -14,18 +14,18 @@ ArgoCD currently runs centralized in the supervisor cluster. When deploying work
 3. add any additional values that are needed, most commonly used will be the python_image which overrides the image location for the  controller.
 4. install
 
-##usage
+## Usage
+
+Once the service is installed and also ArgoCD is installed. Follow these steps
+
+1. Login to ArgoCD and and create a new app with the below settings or apply this application below into the supervisor namespace that ArgoCD is running in.
 
 ```yaml
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  creationTimestamp: "2025-06-12T17:51:38Z"
-  generation: 15
   name: clusters
   namespace: ns01
-  resourceVersion: "14775288"
-  uid: 9081471f-c6c7-426e-9b98-81ca8beaa3d9
 spec:
   destination:
     namespace: ns01
@@ -38,6 +38,11 @@ spec:
   syncPolicy:
     automated: {}
 ```
+
+2. Check and ensure the app is syncing in the Argo console. 
+3. once the cluster starts creating, navigate to Settings->Clusters in the Argo console and you will see a new entry for the newly created cluster
+
+![alt text](images/image.png)
 
 ## Development
  
