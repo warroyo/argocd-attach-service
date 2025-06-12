@@ -15,7 +15,7 @@ LOGGER = logging.getLogger(__name__)
 
 class Controller(BaseHTTPRequestHandler):
 
-    def create_secret(self,object,related):
+    def create_secret(self,object,related,argons):
         LOGGER.info("Logging related objects ---> {0}".format(related['Secret.v1']))
         object['metadata']['labels']['']
         if len(related['Secret.v1']) == 0:
@@ -48,7 +48,7 @@ class Controller(BaseHTTPRequestHandler):
                     "kind": "Secret",
                     "metadata": {
                         "name": f"{object['metadata']['name']}-argo-cluster",
-                        "namespace": object['metadata']['namespace'],
+                        "namespace": argons,
                         "labels": {
                             "argocd.argoproj.io/secret-type": "cluster"
                         }
