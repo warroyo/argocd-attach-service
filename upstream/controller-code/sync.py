@@ -25,7 +25,7 @@ class Controller(BaseHTTPRequestHandler):
             return []
         else:
             secret_name = f"{object['metadata']['name']}-kubeconfig"
-            decoded_kube =  yaml.safe_load(base64.b64decode(related['Secret.v1'][secret_name]['data']).decode('utf-8'))
+            decoded_kube =  yaml.safe_load(base64.b64decode(related['Secret.v1'][secret_name]['data']['value']).decode('utf-8'))
             cert_data = {
                 "tlsClientConfig": {
                     "caData": decoded_kube["clusters"][0]["cluster"]['certificate-authority-data'],
@@ -39,11 +39,10 @@ class Controller(BaseHTTPRequestHandler):
                         "server": decoded_kube["clusters"][0]["cluster"]["server"],
                         "config": json.encode(cert_data)
                     }
-            secret_yaml = yaml.dump(secret_data)
             return [
                 {
                     "apiVersion": "v1",
-                    "data": base64.b64encode(secret_yaml.encode('utf-8')),
+                    "stringData": secret_data,
                     "kind": "Secret",
                     "metadata": {
                         "name": f"{object['metadata']['name']}-argo-cluster",
