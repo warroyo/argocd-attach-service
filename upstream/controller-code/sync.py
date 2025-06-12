@@ -37,7 +37,7 @@ class Controller(BaseHTTPRequestHandler):
                         "name": object['metadata']['name'],
                         "clusterResources": "true",
                         "server": decoded_kube["clusters"][0]["cluster"]["server"],
-                        "config": json.encode(cert_data)
+                        "config": json.dumps(cert_data)
                     }
             return [
                 {
