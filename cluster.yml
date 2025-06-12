@@ -1,0 +1,531 @@
+# Last updated on Thu Jun 12 2025 10:31:39 GMT-0700 (Pacific Daylight Time)
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: Cluster
+metadata:
+  annotations:
+    run.tanzu.vmware.com/tkr-spec: >-
+      H4sIAAAAAAAC/7xWTY/bNhC9768Q9lqQEalP69pTUfRSFD00CIoxObJZUyRBUtpuiv73wrIiybayXgRFePPwzeObmUfK8dVhhxGapyRJkpMyskl+7vfoDUYMv6JGCDjugVMD+qCsaZLTjKBD9wIeqbDdh4GBdkdgT3b/F4q40BrosEkGRjNOU0LIlFOSVrlAhpOnfMQd0KCHiBf88/OcHByIJRJQt1qZ0xzolWwSDllZ1FVFIKtzkleMk33OgbAKJFQVZIK3I9pjsL0XOFczsUynj6FsjAiP4++oOgwROtckzzzlBUlLwtLfOG/yqin4H5d8iRpv0KbX+mrv4EGgQ6+sDCiskWEF0rBHHS4tO6948jSC+dyvmxwiGAlezrLPa2A3P2nG7yM03YrN83hzk5YPtsdZvgdznvd7cXSpAoyxcZxGaJJ//h1j9sWg99iiRyNw1Tly5dahs+48Wes33ZrM62L/H3UfIvrflY896F9AHJXBnzo44Ao6WbpTZLeTJWe85fu0KmAnYYUajZlLzgB5TtKqRJJDnRKo65QUJTBZ56Vg7VqEsCZ6qzX6lTUua6+tOI1Ff/HTDeR71s0KYHWWFnWLOyjrVt7WXfFapHmdkarN9yRnCGTPOSN12eatwGqXY/U/1N0qA1p9Rh+a5OOnMdSBgQPKVqGWl2hwKC72WLpzsd0PX3uMljdu8dXbyTNMnZvm0dmgovWvTaKtAH20ITZFmqYfpixl5wyMQjarijc4Vjdm3o9waJIhowVl1Z8Ta36txUEf8FupnzPK0mVTWI/ShG8WyihjNPsitL4Weu73oNaPpg1j7tW9fs+9Iw9durc2hujBORCn7SPARI9w9/5STldz5ySeDpTdnxzcET0SNxAR1D1JRvOFhD0gEW6DYfQff0RxAufIcrHuaVJaFGsl4x3Y5jr0GCIRl0eCQB+PJKAflMAtdTllj8R1GL0SYWTZ1lYtFRZfUwURX+CVwHaT0ts259NH5o4ooPAYD2ge9IvVS2XZW/1yyhjlUG6RZMXj8QvQStgt7/DdIoG/JUEERZy3f79utYbR7NrG/ClEiP10F85/TtT0uf346em/AAAA//8TdBNpKAoAAA==
+    tkg.tanzu.vmware.com/skip-tls-verify: ''
+    tkg.tanzu.vmware.com/tkg-http-proxy: ''
+    tkg.tanzu.vmware.com/tkg-https-proxy: ''
+    tkg.tanzu.vmware.com/tkg-ip-family: ''
+    tkg.tanzu.vmware.com/tkg-no-proxy: ''
+    tkg.tanzu.vmware.com/tkg-proxy-ca-cert: ''
+    tkg.tanzu.vmware.com/tkg-registry-additional-ca-cert: ''
+    tkg.tanzu.vmware.com/tkg-registry-additional-skip-tls-verify: ''
+  creationTimestamp: '2025-06-11T22:35:19Z'
+  finalizers:
+    - cluster.cluster.x-k8s.io
+    - tkg.tanzu.vmware.com/addon
+  generation: 4
+  labels:
+    argocd-attach: test
+    cluster.x-k8s.io/cluster-name: tkg-cluster-dj3d
+    run.tanzu.vmware.com/tkr: v1.32.0---vmware.6-fips-vkr.2
+    tkg-cluster-selector: tkg-cluster-dj3d
+    topology.cluster.x-k8s.io/owned: ''
+  managedFields:
+    - apiVersion: cluster.x-k8s.io/v1beta1
+      fieldsType: FieldsV1
+      fieldsV1:
+        f:metadata:
+          f:labels:
+            f:cluster.x-k8s.io/cluster-name: {}
+            f:topology.cluster.x-k8s.io/owned: {}
+        f:spec:
+          f:controlPlaneRef: {}
+          f:infrastructureRef: {}
+      manager: capi-topology
+      operation: Apply
+      time: '2025-06-11T22:35:23Z'
+    - apiVersion: cluster.x-k8s.io/v1beta1
+      fieldsType: FieldsV1
+      fieldsV1:
+        f:metadata:
+          f:labels:
+            .: {}
+            f:tkg-cluster-selector: {}
+        f:spec:
+          .: {}
+          f:clusterNetwork:
+            .: {}
+            f:pods:
+              .: {}
+              f:cidrBlocks: {}
+            f:serviceDomain: {}
+            f:services:
+              .: {}
+              f:cidrBlocks: {}
+          f:topology:
+            .: {}
+            f:class: {}
+            f:controlPlane:
+              .: {}
+              f:metadata:
+                .: {}
+                f:annotations:
+                  .: {}
+                  f:run.tanzu.vmware.com/resolve-os-image: {}
+              f:replicas: {}
+            f:variables:
+              .: {}
+              k:{"name":"node"}:
+                .: {}
+                f:name: {}
+                f:value:
+                  .: {}
+                  f:labels:
+                    .: {}
+                    f:argocd-attach: {}
+              k:{"name":"storageClass"}:
+                .: {}
+                f:name: {}
+                f:value: {}
+              k:{"name":"vmClass"}:
+                .: {}
+                f:name: {}
+                f:value: {}
+            f:version: {}
+            f:workers:
+              .: {}
+              f:machineDeployments:
+                .: {}
+                k:{"name":"tkg-cluster-nodepool-fg4j"}:
+                  .: {}
+                  f:class: {}
+                  f:metadata:
+                    .: {}
+                    f:annotations:
+                      .: {}
+                      f:run.tanzu.vmware.com/resolve-os-image: {}
+                  f:name: {}
+                  f:replicas: {}
+      manager: Mozilla
+      operation: Update
+      time: '2025-06-11T22:35:19Z'
+    - apiVersion: cluster.x-k8s.io/v1beta1
+      fieldsType: FieldsV1
+      fieldsV1:
+        f:metadata:
+          f:annotations:
+            f:run.tanzu.vmware.com/tkr-spec: {}
+            f:tkg.tanzu.vmware.com/skip-tls-verify: {}
+            f:tkg.tanzu.vmware.com/tkg-http-proxy: {}
+            f:tkg.tanzu.vmware.com/tkg-https-proxy: {}
+            f:tkg.tanzu.vmware.com/tkg-ip-family: {}
+            f:tkg.tanzu.vmware.com/tkg-no-proxy: {}
+            f:tkg.tanzu.vmware.com/tkg-proxy-ca-cert: {}
+            f:tkg.tanzu.vmware.com/tkg-registry-additional-ca-cert: {}
+            f:tkg.tanzu.vmware.com/tkg-registry-additional-skip-tls-verify: {}
+          f:finalizers:
+            .: {}
+            v:"cluster.cluster.x-k8s.io": {}
+            v:"tkg.tanzu.vmware.com/addon": {}
+        f:spec:
+          f:controlPlaneEndpoint:
+            f:host: {}
+            f:port: {}
+      manager: manager
+      operation: Update
+      time: '2025-06-11T22:44:48Z'
+    - apiVersion: cluster.x-k8s.io/v1beta1
+      fieldsType: FieldsV1
+      fieldsV1:
+        f:status:
+          .: {}
+          f:conditions: {}
+          f:controlPlaneReady: {}
+          f:failureDomains:
+            .: {}
+            f:vmware-system-legacy:
+              .: {}
+              f:controlPlane: {}
+          f:infrastructureReady: {}
+          f:observedGeneration: {}
+          f:phase: {}
+          f:v1beta2:
+            .: {}
+            f:conditions:
+              .: {}
+              k:{"type":"Available"}:
+                .: {}
+                f:lastTransitionTime: {}
+                f:message: {}
+                f:observedGeneration: {}
+                f:reason: {}
+                f:status: {}
+                f:type: {}
+              k:{"type":"ControlPlaneAvailable"}:
+                .: {}
+                f:lastTransitionTime: {}
+                f:message: {}
+                f:observedGeneration: {}
+                f:reason: {}
+                f:status: {}
+                f:type: {}
+              k:{"type":"ControlPlaneInitialized"}:
+                .: {}
+                f:lastTransitionTime: {}
+                f:message: {}
+                f:observedGeneration: {}
+                f:reason: {}
+                f:status: {}
+                f:type: {}
+              k:{"type":"ControlPlaneMachinesReady"}:
+                .: {}
+                f:lastTransitionTime: {}
+                f:message: {}
+                f:observedGeneration: {}
+                f:reason: {}
+                f:status: {}
+                f:type: {}
+              k:{"type":"ControlPlaneMachinesUpToDate"}:
+                .: {}
+                f:lastTransitionTime: {}
+                f:message: {}
+                f:observedGeneration: {}
+                f:reason: {}
+                f:status: {}
+                f:type: {}
+              k:{"type":"Deleting"}:
+                .: {}
+                f:lastTransitionTime: {}
+                f:message: {}
+                f:observedGeneration: {}
+                f:reason: {}
+                f:status: {}
+                f:type: {}
+              k:{"type":"InfrastructureReady"}:
+                .: {}
+                f:lastTransitionTime: {}
+                f:message: {}
+                f:observedGeneration: {}
+                f:reason: {}
+                f:status: {}
+                f:type: {}
+              k:{"type":"Paused"}:
+                .: {}
+                f:lastTransitionTime: {}
+                f:message: {}
+                f:observedGeneration: {}
+                f:reason: {}
+                f:status: {}
+                f:type: {}
+              k:{"type":"Remediating"}:
+                .: {}
+                f:lastTransitionTime: {}
+                f:message: {}
+                f:observedGeneration: {}
+                f:reason: {}
+                f:status: {}
+                f:type: {}
+              k:{"type":"RemoteConnectionProbe"}:
+                .: {}
+                f:lastTransitionTime: {}
+                f:message: {}
+                f:observedGeneration: {}
+                f:reason: {}
+                f:status: {}
+                f:type: {}
+              k:{"type":"RollingOut"}:
+                .: {}
+                f:lastTransitionTime: {}
+                f:message: {}
+                f:observedGeneration: {}
+                f:reason: {}
+                f:status: {}
+                f:type: {}
+              k:{"type":"ScalingDown"}:
+                .: {}
+                f:lastTransitionTime: {}
+                f:message: {}
+                f:observedGeneration: {}
+                f:reason: {}
+                f:status: {}
+                f:type: {}
+              k:{"type":"ScalingUp"}:
+                .: {}
+                f:lastTransitionTime: {}
+                f:message: {}
+                f:observedGeneration: {}
+                f:reason: {}
+                f:status: {}
+                f:type: {}
+              k:{"type":"TopologyReconciled"}:
+                .: {}
+                f:lastTransitionTime: {}
+                f:message: {}
+                f:observedGeneration: {}
+                f:reason: {}
+                f:status: {}
+                f:type: {}
+              k:{"type":"WorkerMachinesReady"}:
+                .: {}
+                f:lastTransitionTime: {}
+                f:message: {}
+                f:observedGeneration: {}
+                f:reason: {}
+                f:status: {}
+                f:type: {}
+              k:{"type":"WorkerMachinesUpToDate"}:
+                .: {}
+                f:lastTransitionTime: {}
+                f:message: {}
+                f:observedGeneration: {}
+                f:reason: {}
+                f:status: {}
+                f:type: {}
+              k:{"type":"WorkersAvailable"}:
+                .: {}
+                f:lastTransitionTime: {}
+                f:message: {}
+                f:observedGeneration: {}
+                f:reason: {}
+                f:status: {}
+                f:type: {}
+            f:controlPlane:
+              .: {}
+              f:availableReplicas: {}
+              f:desiredReplicas: {}
+              f:readyReplicas: {}
+              f:replicas: {}
+              f:upToDateReplicas: {}
+            f:workers:
+              .: {}
+              f:availableReplicas: {}
+              f:desiredReplicas: {}
+              f:readyReplicas: {}
+              f:replicas: {}
+              f:upToDateReplicas: {}
+      manager: manager
+      operation: Update
+      subresource: status
+      time: '2025-06-12T16:43:03Z'
+    - apiVersion: cluster.x-k8s.io/v1beta1
+      fieldsType: FieldsV1
+      fieldsV1:
+        f:metadata:
+          f:labels:
+            f:argocd-attach: {}
+      manager: kubectl-edit
+      operation: Update
+      time: '2025-06-12T16:46:15Z'
+  name: tkg-cluster-dj3d
+  namespace: ns01
+  resourceVersion: '14723452'
+  uid: 4a0f99a7-78c5-453c-96a9-d9ff039eddea
+spec:
+  clusterNetwork:
+    pods:
+      cidrBlocks:
+        - 192.168.156.0/20
+    serviceDomain: cluster.local
+    services:
+      cidrBlocks:
+        - 10.96.0.0/12
+  controlPlaneEndpoint:
+    host: 10.80.0.4
+    port: 6443
+  controlPlaneRef:
+    apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+    kind: KubeadmControlPlane
+    name: tkg-cluster-dj3d-htzvv
+    namespace: ns01
+  infrastructureRef:
+    apiVersion: vmware.infrastructure.cluster.x-k8s.io/v1beta1
+    kind: VSphereCluster
+    name: tkg-cluster-dj3d-q4vcf
+    namespace: ns01
+  topology:
+    class: builtin-generic-v3.3.0
+    controlPlane:
+      metadata:
+        annotations:
+          run.tanzu.vmware.com/resolve-os-image: os-name=photon
+      replicas: 1
+    variables:
+      - name: vmClass
+        value: best-effort-small
+      - name: storageClass
+        value: vsan-default-storage-policy
+      - name: node
+        value:
+          labels:
+            argocd-attach: test
+      - name: kubernetes
+        value:
+          certificateRotation:
+            enabled: true
+            renewalDaysBeforeExpiry: 90
+    version: v1.32.0+vmware.6-fips
+    workers:
+      machineDeployments:
+        - class: node-pool
+          metadata:
+            annotations:
+              run.tanzu.vmware.com/resolve-os-image: os-name=photon
+          name: tkg-cluster-nodepool-fg4j
+          replicas: 1
+status:
+  conditions:
+    - lastTransitionTime: '2025-06-12T16:43:03Z'
+      status: 'True'
+      type: NetworkProviderReconciled
+    - lastTransitionTime: '2025-06-11T22:46:28Z'
+      status: 'True'
+      type: StorageProviderReconciled
+    - lastTransitionTime: '2025-06-11T22:45:31Z'
+      status: 'True'
+      type: SSOReconciled
+    - lastTransitionTime: '2025-06-11T22:44:59Z'
+      status: 'True'
+      type: CloudProviderReconciled
+    - lastTransitionTime: '2025-06-11T22:44:44Z'
+      status: 'True'
+      type: KubeProxyReconciled
+    - lastTransitionTime: '2025-06-11T22:44:44Z'
+      status: 'True'
+      type: DNSReconciled
+    - lastTransitionTime: '2025-06-11T22:44:43Z'
+      status: 'True'
+      type: ControlPlaneReady
+    - lastTransitionTime: '2025-06-11T22:44:43Z'
+      status: 'True'
+      type: ControlPlaneInitialized
+    - lastTransitionTime: '2025-06-11T22:44:43Z'
+      status: 'True'
+      type: Ready
+    - lastTransitionTime: '2025-06-11T22:35:41Z'
+      status: 'True'
+      type: InfrastructureReady
+    - lastTransitionTime: '2025-06-11T22:35:24Z'
+      status: 'True'
+      type: TopologyReconciled
+    - lastTransitionTime: '2025-06-11T22:35:19Z'
+      reason: AlreadyUpToDate
+      severity: Info
+      status: 'False'
+      type: UpdatesAvailable
+  controlPlaneReady: true
+  failureDomains:
+    vmware-system-legacy:
+      controlPlane: true
+  infrastructureReady: true
+  observedGeneration: 4
+  phase: Provisioned
+  v1beta2:
+    conditions:
+      - lastTransitionTime: '2025-06-12T15:06:36Z'
+        message: ''
+        observedGeneration: 4
+        reason: Available
+        status: 'True'
+        type: Available
+      - lastTransitionTime: '2025-06-11T22:44:22Z'
+        message: ''
+        observedGeneration: 4
+        reason: ProbeSucceeded
+        status: 'True'
+        type: RemoteConnectionProbe
+      - lastTransitionTime: '2025-06-11T22:35:41Z'
+        message: ''
+        observedGeneration: 4
+        reason: Ready
+        status: 'True'
+        type: InfrastructureReady
+      - lastTransitionTime: '2025-06-11T22:44:43Z'
+        message: ''
+        observedGeneration: 4
+        reason: Initialized
+        status: 'True'
+        type: ControlPlaneInitialized
+      - lastTransitionTime: '2025-06-12T15:06:36Z'
+        message: ''
+        observedGeneration: 4
+        reason: Available
+        status: 'True'
+        type: ControlPlaneAvailable
+      - lastTransitionTime: '2025-06-11T22:48:03Z'
+        message: ''
+        observedGeneration: 4
+        reason: Available
+        status: 'True'
+        type: WorkersAvailable
+      - lastTransitionTime: '2025-06-11T22:35:23Z'
+        message: ''
+        observedGeneration: 4
+        reason: ReconcileSucceeded
+        status: 'True'
+        type: TopologyReconciled
+      - lastTransitionTime: '2025-06-11T22:35:24Z'
+        message: ''
+        observedGeneration: 4
+        reason: NotRollingOut
+        status: 'False'
+        type: RollingOut
+      - lastTransitionTime: '2025-06-11T22:35:23Z'
+        message: ''
+        observedGeneration: 4
+        reason: NotRemediating
+        status: 'False'
+        type: Remediating
+      - lastTransitionTime: '2025-06-11T22:35:24Z'
+        message: ''
+        observedGeneration: 4
+        reason: NotScalingDown
+        status: 'False'
+        type: ScalingDown
+      - lastTransitionTime: '2025-06-11T22:35:56Z'
+        message: ''
+        observedGeneration: 4
+        reason: NotScalingUp
+        status: 'False'
+        type: ScalingUp
+      - lastTransitionTime: '2025-06-12T15:06:36Z'
+        message: ''
+        observedGeneration: 4
+        reason: Ready
+        status: 'True'
+        type: ControlPlaneMachinesReady
+      - lastTransitionTime: '2025-06-11T22:48:02Z'
+        message: ''
+        observedGeneration: 4
+        reason: Ready
+        status: 'True'
+        type: WorkerMachinesReady
+      - lastTransitionTime: '2025-06-11T22:35:23Z'
+        message: ''
+        observedGeneration: 4
+        reason: UpToDate
+        status: 'True'
+        type: ControlPlaneMachinesUpToDate
+      - lastTransitionTime: '2025-06-11T22:35:23Z'
+        message: ''
+        observedGeneration: 4
+        reason: UpToDate
+        status: 'True'
+        type: WorkerMachinesUpToDate
+      - lastTransitionTime: '2025-06-11T22:35:22Z'
+        message: ''
+        observedGeneration: 4
+        reason: NotPaused
+        status: 'False'
+        type: Paused
+      - lastTransitionTime: '2025-06-11T22:35:22Z'
+        message: ''
+        observedGeneration: 4
+        reason: NotDeleting
+        status: 'False'
+        type: Deleting
+    controlPlane:
+      availableReplicas: 1
+      desiredReplicas: 1
+      readyReplicas: 1
+      replicas: 1
+      upToDateReplicas: 1
+    workers:
+      availableReplicas: 1
+      desiredReplicas: 1
+      readyReplicas: 1
+      replicas: 1
+      upToDateReplicas: 1
