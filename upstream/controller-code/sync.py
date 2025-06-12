@@ -64,8 +64,8 @@ class Controller(BaseHTTPRequestHandler):
             {
                 'apiVersion': 'v1',
                 'resource': 'secrets',
-                'namespace': parent['spec']['sourceNamespace'],
-                'names': [f"{parent['spec']['sourceName']}-kubeconfig"]
+                'namespace': parent['metadata']['namespace'],
+                'names': [f"{parent['metadata']['name']}-kubeconfig"]
             }
         ]
    
@@ -88,7 +88,7 @@ class Controller(BaseHTTPRequestHandler):
                 int(self.headers.get('content-length'))))
             parent: dict = request['parent']
             LOGGER.info("/customize %s", parent['metadata']['name'])
-            LOGGER.info("Parent resource: \n %s", parent['spec'])
+            LOGGER.info("Parent resource: \n %s", parent)
             related_resources: dict = {
                 'relatedResources': self.customize(parent)
             }
