@@ -17,7 +17,6 @@ class Controller(BaseHTTPRequestHandler):
 
     def create_secret(self,object,related,argons):
         LOGGER.info("Logging related objects ---> {0}".format(related['Secret.v1']))
-        object['metadata']['labels']['']
         if len(related['Secret.v1']) == 0:
             LOGGER.info("no secrets match required name")
             return []
