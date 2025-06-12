@@ -14,6 +14,30 @@ ArgoCD currently runs centralized in the supervisor cluster. When deploying work
 3. add any additional values that are needed, most commonly used will be the python_image which overrides the image location for the  controller.
 4. install
 
+##usage
+
+```yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  creationTimestamp: "2025-06-12T17:51:38Z"
+  generation: 15
+  name: clusters
+  namespace: ns01
+  resourceVersion: "14775288"
+  uid: 9081471f-c6c7-426e-9b98-81ca8beaa3d9
+spec:
+  destination:
+    namespace: ns01
+    server: https://kubernetes.default.svc
+  project: default
+  source:
+    path: examples
+    repoURL: https://github.com/warroyo/argocd-attach-service
+    targetRevision: HEAD
+  syncPolicy:
+    automated: {}
+```
 
 ## Development
  
