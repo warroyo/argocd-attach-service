@@ -29,8 +29,8 @@ class Controller(BaseHTTPRequestHandler):
             cert_data = {
                 "tlsClientConfig": {
                     "caData": decoded_kube["clusters"][0]["cluster"]['certificate-authority-data'],
-                    "certData": decoded_kube["users"]["0"]["user"]["client-certificate-data"],
-                    "keyData": decoded_kube["users"]["0"]["user"]["client-key-data"]
+                    "certData": decoded_kube["users"][0]["user"]["client-certificate-data"],
+                    "keyData": decoded_kube["users"][0]["user"]["client-key-data"]
                 }
             }
             secret_data = {
