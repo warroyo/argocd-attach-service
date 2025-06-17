@@ -1,0 +1,22 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: argo-example-cluster-apps
+  namespace: argo-cd
+spec:
+  destination:
+    namespace: default
+    name: 'argo-example'
+  syncPolicy:
+    automated:
+      selfHeal: true
+    syncOptions:
+    - CreateNamespace=true
+  project: default
+  source:
+    targetRevision: '>=5.*.*'
+    repoURL: 'https://stefanprodan.github.io/podinfo'
+    chart: podinfo
+    helm:
+      values: |
+        replicaCount: '2'
