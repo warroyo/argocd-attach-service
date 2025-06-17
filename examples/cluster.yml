@@ -14,9 +14,6 @@ spec:
     services:
       cidrBlocks:
         - 10.96.0.0/12
-  controlPlaneEndpoint:
-    host: 10.80.0.4
-    port: 6443
   topology:
     class: builtin-generic-v3.3.0
     controlPlane:
