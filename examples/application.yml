@@ -2,7 +2,7 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: argo-example-cluster-apps
-  namespace: argo-cd
+  namespace: ns01
 spec:
   destination:
     namespace: default
