@@ -22,17 +22,15 @@ spec:
           run.tanzu.vmware.com/resolve-os-image: os-name=photon
       replicas: 1
     variables:
-      - name: kubernetes
-        value:
-          security:
-            podSecurityStandard:
-              deactivated: true
       - name: vmClass
         value: best-effort-small
       - name: storageClass
         value: vsan-default-storage-policy
       - name: kubernetes
         value:
+          security:
+            podSecurityStandard:
+              deactivated: true
           certificateRotation:
             enabled: true
             renewalDaysBeforeExpiry: 90
