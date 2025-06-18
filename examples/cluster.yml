@@ -22,6 +22,10 @@ spec:
           run.tanzu.vmware.com/resolve-os-image: os-name=photon
       replicas: 1
     variables:
+    variables:
+      - name: podSecurityStandard
+        value:
+        deactivated: true
       - name: vmClass
         value: best-effort-small
       - name: storageClass
