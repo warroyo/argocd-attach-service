@@ -24,7 +24,7 @@ spec:
     variables:
       - name: podSecurityStandard
         value:
-        deactivated: true
+          deactivated: true
       - name: vmClass
         value: best-effort-small
       - name: storageClass
