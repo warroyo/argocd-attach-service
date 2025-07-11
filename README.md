@@ -11,7 +11,7 @@ ArgoCD currently runs centralized in the supervisor cluster. When deploying work
 
 1. login into VCenter and go to the worload management->services page
 2. add a new service and upload the argo-attach.yml
-3. add any additional values that are needed, most commonly used will be the python_image which overrides the image location for the  controller.
+3. add any additional values that are needed, most commonly used will be the `python_image` which overrides the image location for the  controller. To get around dockerhub rate limiting use `python_image: public.ecr.aws/docker/library/python:3.13-bookworm`
 4. install
 
 ## Usage
