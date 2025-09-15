@@ -4,7 +4,6 @@ metadata:
   labels:
     argocd-attach: test
   name: argo-example
-  namespace: ns01
 spec:
   clusterNetwork:
     pods:
