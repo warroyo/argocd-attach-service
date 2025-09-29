@@ -1,6 +1,6 @@
 ##additional values for the argo-attach controller due to kctrl limitation
 
-python_image: python:3.13
+python_image: ghcr.io/warroyo/argocd-attach-service/python:3.13-bookworm
 namespace: ""
 argo_namespace: ""
 
