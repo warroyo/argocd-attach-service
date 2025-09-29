@@ -11,8 +11,21 @@ ArgoCD currently runs centralized in the supervisor cluster. When deploying work
 
 1. login into VCenter and go to the worload management->services page
 2. add a new service and upload the argo-attach.yml
-3. add any additional values that are needed, most commonly used will be the `python_image` which overrides the image location for the  controller. To get around dockerhub rate limiting use `python_image: public.ecr.aws/docker/library/python:3.13-bookworm`
+3. add any additional values that are needed
 4. install
+
+## AirGap Install
+
+1. relocate the image bundle to you repository, grab the latest imaeg bundle from the `argo-atatch.yml`
+
+```bash
+imgpkg copy -b ghcr.io/warroyo/argocd-auto-attach@sha256:0fccfa38786c1a99354149140560683cc65c52e2351dc5fa145741b6701e78b7 --to-repo your-repo.com/argocd-auto-attach
+```
+
+2. replace the image bundle in the `argo-atatch.yml` with your new path to the image bundle. the SHA should still be the same so all you should need to replace is the `ghcr.io/warroyo/argocd-auto-attach` with your repo and path.
+
+3. follow the steps to install in the previosu step. 
+
 
 ## Usage
 
