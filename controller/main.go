@@ -145,9 +145,9 @@ func applySecret(client *dynamic.DynamicClient, obj any, namespaces StringSlice)
 	}
 	argoConfig := &ArgoConfig{
 		TLSClientConfig: &TLSClientConfig{
-			CAData:   string(config.Clusters[clusterName].CertificateAuthorityData),
-			KeyData:  string(config.AuthInfos[fmt.Sprintf("%s-admin", clusterName)].ClientKeyData),
-			CertData: string(config.AuthInfos[fmt.Sprintf("%s-admin", clusterName)].ClientCertificateData),
+			CAData:   base64.StdEncoding.EncodeToString(config.Clusters[clusterName].CertificateAuthorityData),
+			KeyData:  base64.StdEncoding.EncodeToString(config.AuthInfos[fmt.Sprintf("%s-admin", clusterName)].ClientKeyData),
+			CertData: base64.StdEncoding.EncodeToString(config.AuthInfos[fmt.Sprintf("%s-admin", clusterName)].ClientCertificateData),
 		},
 	}
 
