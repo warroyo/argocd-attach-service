@@ -21,7 +21,7 @@ spec:
         image: controller
         cmd: ["./main"]
         args: 
-        - #@ "-rsync-period " + data.values.resync_period
+        - #@ "-resync-period " + data.values.resync_period
         #@ for namespace in data.values.blocked_namespaces:
         - #@ "-blocked-ns " + namespace
         #@ end
