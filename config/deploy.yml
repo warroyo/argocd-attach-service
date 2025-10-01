@@ -72,7 +72,7 @@ rules:
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: aggregate-kro-view
+  name: aggregate-argoclusters-view
   labels:
     rbac.authorization.k8s.io/aggregate-to-view: "true"
 rules:
