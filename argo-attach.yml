@@ -4,9 +4,9 @@ metadata:
   creationTimestamp: null
   name: argocd-attach.fling.vsphere.vmware.com
 spec:
-  displayName: argocd-attach
-  longDescription: argocd-attach.fling.vsphere.vmware.com
-  shortDescription: argocd-attach.fling.vsphere.vmware.com
+  displayName: ArgoCD Attach Service
+  longDescription: Provides the ability to auto attach clusters to ArgoCD
+  shortDescription: ArgoCD Auto Attach
 
 ---
 apiVersion: data.packaging.carvel.dev/v1alpha1
@@ -16,14 +16,14 @@ metadata:
   name: argocd-attach.fling.vsphere.vmware.com.2.0.3
 spec:
   refName: argocd-attach.fling.vsphere.vmware.com
-  releasedAt: "2025-10-01T19:05:40Z"
+  releasedAt: "2025-10-01T19:27:18Z"
   template:
     spec:
       deploy:
       - kapp: {}
       fetch:
       - imgpkgBundle:
-          image: ghcr.io/warroyo/argocd-attach-service@sha256:11adc8dc51867bf44d4eb803e958eb5e01a5fb4cdb29b3c4f2820805be251d20
+          image: ghcr.io/warroyo/argocd-attach-service@sha256:3ddc965bf2a9358ab76f6ded7517dca41439b9c0533e02f16bac9502c0d79038
       template:
       - ytt:
           paths:
