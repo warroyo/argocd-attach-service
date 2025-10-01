@@ -1,0 +1,10 @@
+apiVersion: field.vmware.com/v1
+kind: ArgoCluster
+metadata:
+  name: sample-cluster
+spec:
+  clusterName: "sample-cluster"
+  argoNamespace: "default"
+  clusterLabels:
+    test: "test"
+  project: testing

@@ -13,13 +13,12 @@ spec:
       fetch:
       - git: {}
       template:
-      - helmTemplate:
-          path: upstream
       - ytt:
           paths:
-          - "-"
+          - config
       - kbld: {}
-  valuesSchema: null
+  valuesSchema:
+    openAPIv3: null
   version: 0.0.0
 
 ---
@@ -29,9 +28,9 @@ metadata:
   creationTimestamp: null
   name: argocd-attach.fling.vsphere.vmware.com
 spec:
-  displayName: argocd-attach
-  longDescription: argocd-attach.fling.vsphere.vmware.com
-  shortDescription: argocd-attach.fling.vsphere.vmware.com
+  displayName: ArgoCD Attach Service
+  longDescription: Provides the ability to auto attach clusters to ArgoCD 
+  shortDescription: ArgoCD Auto Attach
 
 ---
 apiVersion: packaging.carvel.dev/v1alpha1

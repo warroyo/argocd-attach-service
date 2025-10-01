@@ -1,0 +1,8 @@
+apiVersion: kbld.k14s.io/v1alpha1
+kind: Config
+sources:
+- image: controller
+  path: ./controller
+destinations:
+- image: controller
+  newImage: ghcr.io/warroyo/argocd-attach-service/controller
