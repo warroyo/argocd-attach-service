@@ -42,6 +42,25 @@ Once the service is installed and also ArgoCD is installed. Follow these steps
 1. update the yaml in the `examples/argoCluster.yml` with your details
 2. `kubectl apply -f examples/argoCluster.yml`
 
+
+## Sample CRD
+
+### ArgoCluster
+
+this is a sample CRD that handles adding clusters to ArgoCD
+
+```yaml
+apiVersion: field.vmware.com/v1
+kind: ArgoCluster
+metadata:
+  name: sample-cluster
+spec:
+  clusterName: "sample-cluster"
+  argoNamespace: "default"
+  clusterLabels:
+    test: "test"
+  project: testing
+```
 ## Development
  
 

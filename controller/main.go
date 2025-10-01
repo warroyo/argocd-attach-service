@@ -163,6 +163,7 @@ func applySecret(client *dynamic.DynamicClient, obj any, namespaces StringSlice)
 		Config:           base64.StdEncoding.EncodeToString([]byte(string(jsonConfig))),
 	}
 
+	labels["argocd.argoproj.io/secret-type"] = "cluster"
 	secretName := fmt.Sprintf("%s-argo-cluster", clusterName)
 	secret := &unstructured.Unstructured{
 		Object: map[string]interface{}{
