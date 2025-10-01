@@ -1,0 +1,6 @@
+#@data/values-schema
+---
+
+resync_period: "60"
+namespace: ""
+blocked_namespaces: [""]

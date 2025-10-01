@@ -1,0 +1,81 @@
+#@ load("@ytt:data", "data")
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: argo-attach-controller
+  namespace: #@ data.values.namespace
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: argo-attach
+  template:
+    metadata:
+      labels:
+        app: argo-attach
+    spec:
+      serviceAccountName: argoattach
+      containers:
+      - name: controller
+        image: controller
+        args: 
+        - #@ "-rsync-period " + data.values.resync_period
+        #@ for namespace in data.values.blocked_namespaces:
+        - #@ "-blocked-ns " + namespace
+        #@ end
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: argoattach
+  namespace: default
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: argoattach
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["*"]
+  - apiGroups: ["field.vmware.com"]  
+    resources: ["argoclusters"]    
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: argoattach
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: argoattach
+subjects:
+  - kind: ServiceAccount
+    name: argoattach
+    namespace: #@ data.values.namespace
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: aggregate-argoclusters-edit
+  labels:
+    rbac.authorization.k8s.io/aggregate-to-admin: "true"
+    rbac.authorization.k8s.io/aggregate-to-edit: "true"
+rules:
+- apiGroups: ["field.vmware.com"]
+  resources: ["argoclusters"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: aggregate-kro-view
+  labels:
+    rbac.authorization.k8s.io/aggregate-to-view: "true"
+rules:
+- apiGroups: ["field.vmware.com"]
+  resources: ["argoclusters"]
+  verbs: ["get", "list", "watch"]

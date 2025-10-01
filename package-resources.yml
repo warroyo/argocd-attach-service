@@ -13,13 +13,12 @@ spec:
       fetch:
       - git: {}
       template:
-      - helmTemplate:
-          path: upstream
       - ytt:
           paths:
-          - "-"
+          - config
       - kbld: {}
-  valuesSchema: null
+  valuesSchema:
+    openAPIv3: null
   version: 0.0.0
 
 ---

@@ -13,17 +13,13 @@ spec:
           deploy:
           - kapp: {}
           template:
-          - helmTemplate:
-              name: metacontroller
-              path: upstream
           - ytt:
-              ignoreUnknownComments: true
               paths:
-              - '-'
+              - config
           - kbld: {}
       export:
       - imgpkgBundle:
-          image: ghcr.io/warroyo/argocd-auto-attach
+          image: ghcr.io/warroyo/argocd-attach-service
           useKbldImagesLock: true
         includePaths:
-        - upstream
+        - config
