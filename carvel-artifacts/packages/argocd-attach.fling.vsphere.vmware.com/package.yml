@@ -2,17 +2,17 @@ apiVersion: data.packaging.carvel.dev/v1alpha1
 kind: Package
 metadata:
   creationTimestamp: null
-  name: argocd-attach.fling.vsphere.vmware.com.2.0.6
+  name: argocd-attach.fling.vsphere.vmware.com.2.0.7
 spec:
   refName: argocd-attach.fling.vsphere.vmware.com
-  releasedAt: "2025-10-01T19:59:14Z"
+  releasedAt: "2025-10-02T15:31:47Z"
   template:
     spec:
       deploy:
       - kapp: {}
       fetch:
       - imgpkgBundle:
-          image: ghcr.io/warroyo/argocd-attach-service@sha256:8f2502142eed555df19e4b56cfe2c919629e2102ad9b441fd54714e6228ba085
+          image: ghcr.io/warroyo/argocd-attach-service@sha256:ed3e9124e66cb980193cb5532563360fcebdd86fedd9182100495b7750796eee
       template:
       - ytt:
           paths:
@@ -38,4 +38,4 @@ spec:
           default: "60"
           type: string
       type: object
-  version: 2.0.6
+  version: 2.0.7
