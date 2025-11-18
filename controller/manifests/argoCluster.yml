@@ -6,5 +6,5 @@ spec:
   clusterName: "sample-cluster"
   argoNamespace: "default"
   clusterLabels:
-    test: "test2"
-  project: testing
+    test: "test"
+  project: default
