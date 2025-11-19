@@ -57,6 +57,10 @@ spec:
               properties:
                 argoNamespace:
                   type: string
+                  description: the namespace that the ArgoCD instance is deployed into
+                serviceAccount:
+                  type: string
+                  description: an existing service account to use for the namespace attachment
                 project:
                   type: string
                   description: the argo project to attach to

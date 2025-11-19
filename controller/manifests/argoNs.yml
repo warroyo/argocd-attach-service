@@ -3,7 +3,8 @@ kind: ArgoNamespace
 metadata:
   name: sample-ns
 spec:
-  argoNamespace: "default"
+  argoNamespace: "argocd"
+  serviceAccount: "testing-account"
   clusterLabels:
     test: "test"
-  project: testing
+  project: default
