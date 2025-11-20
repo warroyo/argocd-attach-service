@@ -3,6 +3,7 @@ module github.com/warroyo/argocd-attach-service
 go 1.24.7
 
 require (
+	k8s.io/api v0.34.1
 	k8s.io/apimachinery v0.34.1
 	k8s.io/client-go v0.34.1
 )

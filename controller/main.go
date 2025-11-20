@@ -12,6 +12,7 @@ import (
 	"slices"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -98,15 +99,6 @@ type ArgoClusterSpec struct {
 	Project       string            `json:"project"`
 }
 
-type ArgoClusterSecret struct {
-	Name             string `json:"name,omitempty"`
-	Server           string `json:"server,omitempty"`
-	Config           string `json:"config,omitempty"`
-	Project          string `json:"project,omitempty"`
-	ClusterResources string `json:"clusterResources,omitempty"`
-	Namespaces       string `json:"namespaces,omitempty"`
-}
-
 type ArgoConfig struct {
 	TLSClientConfig *TLSClientConfig `json:"tlsClientConfig,omitempty"`
 	BearerToken     string           `json:"bearerToken,omitempty"`
@@ -158,7 +150,6 @@ func updateGenericStatus(u *unstructured.Unstructured, success bool, reconcileEr
 }
 
 func applyArgoNamespace(client *dynamic.DynamicClient, obj interface{}, namespaces []string) error {
-
 	argoNs, err := convertNs(obj)
 	if err != nil {
 		log.Printf("unable to convert object to structured argocd namespace: %v", err)
@@ -200,12 +191,13 @@ func applyArgoNamespace(client *dynamic.DynamicClient, obj interface{}, namespac
 		log.Printf("unable to encoded argo config: %v", err)
 		return fmt.Errorf("unable to encoded argo config: %v", err)
 	}
-	secretData := &ArgoClusterSecret{
-		Name:       base64.StdEncoding.EncodeToString([]byte(clusterName)),
-		Server:     base64.StdEncoding.EncodeToString([]byte("https://kubernetes.default.svc.cluster.local:443")),
-		Project:    base64.StdEncoding.EncodeToString([]byte(project)),
-		Config:     base64.StdEncoding.EncodeToString([]byte(string(jsonConfig))),
-		Namespaces: base64.StdEncoding.EncodeToString([]byte(string(argoNs.Namespace))),
+
+	secretData := map[string]string{
+		"name":       clusterName,
+		"server":     "https://kubernetes.default.svc.cluster.local:443",
+		"project":    project,
+		"config":     string(jsonConfig),
+		"namespaces": string(argoNs.Namespace),
 	}
 
 	cluster := &ArgoCluster{
@@ -286,12 +278,12 @@ func applyArgoCluster(client *dynamic.DynamicClient, obj interface{}, namespaces
 	if err != nil {
 		log.Printf("unable to encoded argo config: %v", err)
 	}
-	secretData := &ArgoClusterSecret{
-		Name:             base64.StdEncoding.EncodeToString([]byte(clusterName)),
-		Server:           base64.StdEncoding.EncodeToString([]byte(config.Clusters[clusterName].Server)),
-		ClusterResources: base64.StdEncoding.EncodeToString([]byte("true")),
-		Project:          base64.StdEncoding.EncodeToString([]byte(project)),
-		Config:           base64.StdEncoding.EncodeToString([]byte(string(jsonConfig))),
+	secretData := map[string]string{
+		"name":             clusterName,
+		"server":           config.Clusters[clusterName].Server,
+		"clusterresources": "true",
+		"prject":           project,
+		"config":           string(jsonConfig),
 	}
 
 	err = applySecret(client, &argoCluster, secretData)
@@ -305,26 +297,33 @@ func applyArgoCluster(client *dynamic.DynamicClient, obj interface{}, namespaces
 
 }
 
-func applySecret(client *dynamic.DynamicClient, argoCluster *ArgoCluster, secretData *ArgoClusterSecret) error {
+func applySecret(client *dynamic.DynamicClient, argoCluster *ArgoCluster, secretData map[string]string) error {
 	labels := argoCluster.Spec.ClusterLabels
 	clusterName := argoCluster.Spec.ClusterName
 	argoNamespace := argoCluster.Spec.ArgoNamespace
 	labels["argocd.argoproj.io/secret-type"] = "cluster"
 	secretName := fmt.Sprintf("%s-argo-cluster", clusterName)
-	secret := &unstructured.Unstructured{
-		Object: map[string]interface{}{
-			"apiVersion": "v1",
-			"kind":       "Secret",
-			"metadata": map[string]interface{}{
-				"name":   secretName,
-				"labels": labels,
-			},
-			"type": "Opaque",
-			"data": secretData,
-		},
-	}
 
-	_, err := client.Resource(secretGVR).Namespace(argoNamespace).Apply(context.TODO(), secretName, secret, metav1.ApplyOptions{FieldManager: "argo-attach-controller"})
+	secret := &corev1.Secret{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Secret",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      secretName,
+			Namespace: argoNamespace,
+			Labels:    map[string]string{"argocd.argoproj.io/secret-type": "cluster"},
+		},
+		StringData: secretData,
+		Type:       corev1.SecretTypeOpaque,
+	}
+	secretU, err := runtime.DefaultUnstructuredConverter.ToUnstructured(secret)
+	if err != nil {
+		return fmt.Errorf("failed to convert secret to unstructured: %w", err)
+	}
+	secretUnstructured := &unstructured.Unstructured{Object: secretU}
+
+	_, err = client.Resource(secretGVR).Namespace(argoNamespace).Apply(context.TODO(), secretUnstructured.GetName(), secretUnstructured, metav1.ApplyOptions{FieldManager: "argo-attach-controller", Force: true})
 	if err != nil {
 		return err
 	}
@@ -607,8 +606,8 @@ func (c *Controller) Reconcile(obj interface{}) (reconcileResult error) {
 			log.Printf("%s Warning: Failed to patch status after adding finalizer: %v\n", logPrefix, statusPatchErr)
 		}
 
-		log.Printf("%s Finalizer added. Requeuing for main reconciliation.\n", logPrefix)
-		return nil
+		log.Printf("%s Finalizer added. continuing for main reconciliation.\n", logPrefix)
+		// return nil
 	}
 
 	log.Printf("%s Finalizer is present. Running normal reconciliation.\n", logPrefix)
@@ -653,10 +652,32 @@ func setupInformer(client dynamic.Interface, gvr schema.GroupVersionResource, co
 			}
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
-			key, err := cache.MetaNamespaceKeyFunc(newObj)
-			if err == nil {
-				fmt.Printf("\n--- %s UPDATE EVENT DETECTED. Queuing %s ---\n", controller.gvr.Resource, key)
-				controller.Queue.Add(key)
+			oldU, err := toUnstructured(oldObj)
+			if err != nil {
+				log.Printf("Error converting old object for update filter: %v\n", err)
+				return
+			}
+			newU, err := toUnstructured(newObj)
+			if err != nil {
+				log.Printf("Error converting new object for update filter: %v\n", err)
+				return
+			}
+
+			generationChanged := oldU.GetGeneration() != newU.GetGeneration()
+			deletionRequested := !newU.GetDeletionTimestamp().IsZero()
+			if generationChanged || deletionRequested {
+				key, err := cache.MetaNamespaceKeyFunc(newObj)
+				if err == nil {
+					reason := "Generation changed"
+					if deletionRequested {
+						reason = "Deletion requested"
+					}
+					fmt.Printf("\n--- %s UPDATE EVENT DETECTED (%s). Queuing %s ---\n", controller.gvr.Resource, reason, key)
+					controller.Queue.Add(key)
+				}
+			} else {
+				key, _ := cache.MetaNamespaceKeyFunc(newObj)
+				fmt.Printf("--- %s UPDATE EVENT IGNORED Generation not changed. Key: %s ---\n", controller.gvr.Resource, key)
 			}
 		},
 		DeleteFunc: func(obj interface{}) {

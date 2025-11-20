@@ -7,4 +7,5 @@ spec:
   serviceAccount: "testing-account"
   clusterLabels:
     test: "test"
+    test2: "test3"
   project: default
