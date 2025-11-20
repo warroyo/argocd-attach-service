@@ -12,6 +12,7 @@ import (
 	"slices"
 	"time"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -23,7 +24,10 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/homedir"
+	"k8s.io/client-go/util/workqueue"
 )
+
+const numWorkers = 2
 
 var resync *int64 = new(int64)
 var secretGVR = schema.GroupVersionResource{
@@ -55,13 +59,19 @@ func (s *StringSlice) Set(value string) error {
 	return nil
 }
 
+type StatusUpdater func(*unstructured.Unstructured, bool, error) map[string]interface{}
+
 type Controller struct {
-	client        *dynamic.DynamicClient
-	gvr           schema.GroupVersionResource
-	finalizerName string
-	provisionFunc func(*dynamic.DynamicClient, interface{}, []string) // Function to run during normal operation
-	cleanupFunc   func(*dynamic.DynamicClient, interface{}) error     // Function to run during cleanup
-	namespaces    []string
+	client           *dynamic.DynamicClient
+	gvr              schema.GroupVersionResource
+	finalizerName    string
+	provisionFunc    func(*dynamic.DynamicClient, interface{}, []string) error // Function to run during normal operation
+	cleanupFunc      func(*dynamic.DynamicClient, interface{}) error           // Function to run during cleanup
+	updateStatusFunc StatusUpdater
+	namespaces       []string
+
+	Queue    workqueue.RateLimitingInterface
+	Informer cache.SharedIndexInformer
 }
 
 type ArgoNamespace struct {
@@ -121,45 +131,38 @@ func getSecret(client *dynamic.DynamicClient, namespace string, name string) (*u
 
 }
 
-func toUnstructured(obj interface{}) (*unstructured.Unstructured, error) {
-	if runtimeObj, ok := obj.(runtime.Object); ok {
-		return runtimeObj.(*unstructured.Unstructured), nil
+func updateGenericStatus(u *unstructured.Unstructured, success bool, reconcileErr error) map[string]interface{} {
+	if reconcileErr != nil {
+		return map[string]interface{}{
+			"state":       "Failed",
+			"message":     fmt.Sprintf("Reconciliation failed: %s", reconcileErr.Error()),
+			"ready":       false,
+			"lastUpdated": metav1.Now(),
+		}
 	}
-	return nil, fmt.Errorf("object is not an unstructured object")
+	if success {
+		return map[string]interface{}{
+			"state":       "Ready",
+			"message":     "Resource provisioned successfully.",
+			"ready":       true,
+			"lastUpdated": metav1.Now(),
+		}
+	}
+	// Default/Pending status when finalizer is added but provisioning hasn't run yet
+	return map[string]interface{}{
+		"state":       "Pending",
+		"message":     "Initializing or waiting for finalizer to be confirmed.",
+		"ready":       false,
+		"lastUpdated": metav1.Now(),
+	}
 }
 
-func convertObj(obj any) (ArgoCluster, error) {
-	argoCluster := ArgoCluster{}
-	unstructuredObj, ok := obj.(*unstructured.Unstructured)
-	if !ok {
-		return argoCluster, fmt.Errorf("unable to convert to unstuctured object")
-	}
-	err := runtime.DefaultUnstructuredConverter.FromUnstructured(unstructuredObj.Object, &argoCluster)
-	if err != nil {
-		return argoCluster, err
-	}
-	return argoCluster, nil
-}
-
-func convertNs(obj any) (ArgoNamespace, error) {
-	argoNs := ArgoNamespace{}
-	unstructuredObj, ok := obj.(*unstructured.Unstructured)
-	if !ok {
-		return argoNs, fmt.Errorf("unable to convert to unstuctured object")
-	}
-	err := runtime.DefaultUnstructuredConverter.FromUnstructured(unstructuredObj.Object, &argoNs)
-	if err != nil {
-		return argoNs, err
-	}
-	return argoNs, nil
-}
-
-func applyArgoNamespace(client *dynamic.DynamicClient, obj interface{}, namespaces []string) {
+func applyArgoNamespace(client *dynamic.DynamicClient, obj interface{}, namespaces []string) error {
 
 	argoNs, err := convertNs(obj)
 	if err != nil {
 		log.Printf("unable to convert object to structured argocd namespace: %v", err)
-		return
+		return fmt.Errorf("conversion error: %w", err)
 	}
 	clusterName := fmt.Sprintf("supervisor-ns-%s", argoNs.Namespace)
 	argoNs.Spec.ClusterName = clusterName
@@ -172,14 +175,15 @@ func applyArgoNamespace(client *dynamic.DynamicClient, obj interface{}, namespac
 		token, err = createArgoSvcAccount(client, &argoNs)
 		if err != nil {
 			log.Printf("unable to create svc account for %s: %v", argoNs.Name, err)
-			return
+			return fmt.Errorf("unable to create svc account for %s: %v", argoNs.Name, err)
 		}
 	} else {
 		//get existing service account token
+
 		token, err = getSAToken(client, argoNs.Namespace, argoNs.Spec.ServiceAccount)
 		if err != nil {
 			log.Printf("unable to get svc account token for %s: %v", argoNs.Spec.ServiceAccount, err)
-			return
+			return fmt.Errorf("unable to get svc account token for %s: %v", argoNs.Spec.ServiceAccount, err)
 		}
 	}
 
@@ -194,6 +198,7 @@ func applyArgoNamespace(client *dynamic.DynamicClient, obj interface{}, namespac
 	jsonConfig, err := json.Marshal(argoConfig)
 	if err != nil {
 		log.Printf("unable to encoded argo config: %v", err)
+		return fmt.Errorf("unable to encoded argo config: %v", err)
 	}
 	secretData := &ArgoClusterSecret{
 		Name:       base64.StdEncoding.EncodeToString([]byte(clusterName)),
@@ -215,18 +220,19 @@ func applyArgoNamespace(client *dynamic.DynamicClient, obj interface{}, namespac
 	err = applySecret(client, cluster, secretData)
 	if err != nil {
 		log.Printf("unable to create or update argo cluster secret %v", err)
-		return
+		return fmt.Errorf("unable to create or update argo cluster secret %v", err)
 	}
 	secretName := fmt.Sprintf("%s-argo-cluster", clusterName)
 	log.Printf("succesfully created or update argo cluster secret %s", secretName)
 
+	return nil
 }
 
-func applyArgoCluster(client *dynamic.DynamicClient, obj interface{}, namespaces []string) {
+func applyArgoCluster(client *dynamic.DynamicClient, obj interface{}, namespaces []string) error {
 	argoCluster, err := convertObj(obj)
 	if err != nil {
 		log.Printf("unable to convert object to structured argocd cluster: %v", err)
-		return
+		return fmt.Errorf("unable to convert object to structured argocd cluster: %v", err)
 	}
 
 	namespace := argoCluster.ObjectMeta.Namespace
@@ -236,37 +242,37 @@ func applyArgoCluster(client *dynamic.DynamicClient, obj interface{}, namespaces
 
 	if slices.Contains(namespaces, argoNamespace) {
 		log.Printf("argoNamespace is in the list of blocked namespaces, not creating secret: %v", namespaces)
-		return
+		return fmt.Errorf("argoNamespace is in the list of blocked namespaces, not creating secret: %v", namespaces)
 	}
 
 	kubeconfigUns, err := getSecret(client, namespace, clusterName)
 	if err != nil {
 		log.Printf("unable to retrieve kubeconfig secret: %v", err)
-		return
+		return fmt.Errorf("unable to retrieve kubeconfig secret: %v", err)
 	}
 
 	kubeconfig, found, err := unstructured.NestedStringMap(kubeconfigUns.Object, "data")
 	if err != nil || !found {
 		log.Printf("cannot get secret data: %v", err)
-		return
+		return fmt.Errorf("cannot get secret data: %v", err)
 	}
 
 	encodedSecret, ok := kubeconfig["value"]
 	if !ok {
 		log.Println("value does not exist in kubeconfig secret")
-		return
+		return fmt.Errorf("value does not exist in kubeconfig secret")
 	}
 
 	decoded, err := base64.StdEncoding.DecodeString(encodedSecret)
 	if err != nil {
 		log.Printf("failed to decode value: %v", err)
-		return
+		return fmt.Errorf("failed to decode value: %v", err)
 	}
 
 	config, err := clientcmd.Load(decoded)
 	if err != nil {
 		log.Printf("failed to read kubconfig data: %v", err)
-		return
+		return fmt.Errorf("failed to read kubconfig data: %v", err)
 	}
 	argoConfig := &ArgoConfig{
 		TLSClientConfig: &TLSClientConfig{
@@ -291,10 +297,11 @@ func applyArgoCluster(client *dynamic.DynamicClient, obj interface{}, namespaces
 	err = applySecret(client, &argoCluster, secretData)
 	if err != nil {
 		log.Printf("unable to create or update argo cluster secret %v", err)
-		return
+		return fmt.Errorf("unable to create or update argo cluster secret %v", err)
 	}
 	secretName := fmt.Sprintf("%s-argo-cluster", clusterName)
 	log.Printf("succesfully created or update argo cluster secret %s", secretName)
+	return nil
 
 }
 
@@ -459,6 +466,16 @@ subjects:
 }
 
 func getSAToken(client *dynamic.DynamicClient, namespace string, saName string) (string, error) {
+
+	_, err := client.Resource(saGVR).Namespace(namespace).Get(context.TODO(), saName, metav1.GetOptions{})
+
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return "", fmt.Errorf("service account %s/%s not found", namespace, saName)
+		}
+		return "", fmt.Errorf("failed to get service account %s/%s: %w", namespace, saName, err)
+	}
+
 	secretName := fmt.Sprintf("%s-token", saName)
 	tokenYaml := fmt.Sprintf(`
 apiVersion: v1
@@ -474,7 +491,7 @@ type: kubernetes.io/service-account-token
 	token := &unstructured.Unstructured{}
 	_ = yaml.Unmarshal([]byte(tokenYaml), token)
 
-	_, err := client.Resource(secretGVR).Namespace(namespace).Apply(context.TODO(), secretName, token, metav1.ApplyOptions{FieldManager: "argo-attach-controller"})
+	_, err = client.Resource(secretGVR).Namespace(namespace).Apply(context.TODO(), secretName, token, metav1.ApplyOptions{FieldManager: "argo-attach-controller"})
 	if err != nil {
 		log.Printf("unable to create or update argo namespace service account token %v", err)
 		return "", err
@@ -505,7 +522,7 @@ type: kubernetes.io/service-account-token
 	return returnToken, nil
 }
 
-func (c *Controller) Reconcile(obj interface{}) error {
+func (c *Controller) Reconcile(obj interface{}) (reconcileResult error) {
 	u, err := toUnstructured(obj)
 	if err != nil {
 		return fmt.Errorf("error converting to unstructured: %w", err)
@@ -516,6 +533,35 @@ func (c *Controller) Reconcile(obj interface{}) error {
 	kind := u.GetKind()
 	logPrefix := fmt.Sprintf("[%s/%s/%s]", kind, namespace, name)
 
+	var reconcileErr error
+	defer func() {
+		if reconcileErr != nil {
+			log.Printf("%s DEFER STATUS UPDATE: Attempting to patch status after error: %v\n", logPrefix, reconcileErr)
+
+			latestU, getErr := c.client.Resource(c.gvr).Namespace(namespace).Get(context.TODO(), name, metav1.GetOptions{})
+			if getErr != nil {
+				if apierrors.IsNotFound(getErr) {
+					log.Printf("%s Status patch skipped: Resource was deleted during defer execution.\n", logPrefix)
+					reconcileResult = reconcileErr
+					return
+				}
+				log.Printf("%s CRITICAL: Failed to re-fetch object for status patch: %v. Returning original error.\n", logPrefix, getErr)
+				reconcileResult = reconcileErr
+				return
+			}
+
+			statusMap := c.updateStatusFunc(latestU, false, reconcileErr)
+
+			if statusPatchErr := patchStatus(context.TODO(), c.client, c.gvr, latestU, statusMap); statusPatchErr != nil {
+				if !apierrors.IsNotFound(statusPatchErr) && !apierrors.IsConflict(statusPatchErr) {
+					log.Printf("%s CRITICAL: Failed to patch status after error: %v\n", logPrefix, statusPatchErr)
+				}
+			}
+
+			reconcileResult = reconcileErr
+		}
+	}()
+
 	if !u.GetDeletionTimestamp().IsZero() {
 		log.Printf("%s DeletionTimestamp detected. Initiating finalization.\n", logPrefix)
 
@@ -524,7 +570,8 @@ func (c *Controller) Reconcile(obj interface{}) error {
 
 			if cleanupErr := c.cleanupFunc(c.client, obj); cleanupErr != nil {
 				log.Printf("%s CLEANUP FAILED: %v. Will retry on next sync.\n", logPrefix, cleanupErr)
-				return cleanupErr
+				reconcileErr = fmt.Errorf("cleanup failed: %w", cleanupErr)
+				return reconcileErr
 			}
 
 			currentFinalizers := u.GetFinalizers()
@@ -532,7 +579,8 @@ func (c *Controller) Reconcile(obj interface{}) error {
 
 			if err := patchFinalizer(context.TODO(), c.client, c.gvr, u, c.finalizerName, updatedFinalizers); err != nil {
 				log.Printf("%s ERROR patching to remove finalizer: %v\n", logPrefix, err)
-				return err
+				reconcileErr = fmt.Errorf("finalizer removal patch failed: %w", err)
+				return reconcileErr
 			}
 			log.Printf("%s Finalizer %s removed successfully. Deletion will now complete.\n", logPrefix, c.finalizerName)
 			return nil
@@ -550,7 +598,13 @@ func (c *Controller) Reconcile(obj interface{}) error {
 
 		if err := patchFinalizer(context.TODO(), c.client, c.gvr, u, c.finalizerName, updatedFinalizers); err != nil {
 			log.Printf("%s ERROR patching to add finalizer: %v\n", logPrefix, err)
-			return err
+			reconcileErr = fmt.Errorf("finalizer addition patch failed: %w", err)
+			return reconcileErr
+		}
+
+		statusMap := c.updateStatusFunc(u, false, nil)
+		if statusPatchErr := patchStatus(context.TODO(), c.client, c.gvr, u, statusMap); statusPatchErr != nil {
+			log.Printf("%s Warning: Failed to patch status after adding finalizer: %v\n", logPrefix, statusPatchErr)
 		}
 
 		log.Printf("%s Finalizer added. Requeuing for main reconciliation.\n", logPrefix)
@@ -558,7 +612,19 @@ func (c *Controller) Reconcile(obj interface{}) error {
 	}
 
 	log.Printf("%s Finalizer is present. Running normal reconciliation.\n", logPrefix)
-	c.provisionFunc(c.client, obj, c.namespaces)
+	if provisionErr := c.provisionFunc(c.client, obj, c.namespaces); provisionErr != nil {
+		reconcileErr = fmt.Errorf("provisioning failed: %w", provisionErr)
+		return reconcileErr // Defer handles status update and returns error for retry
+	}
+
+	statusMap := c.updateStatusFunc(u, true, nil)
+	if statusPatchErr := patchStatus(context.TODO(), c.client, c.gvr, u, statusMap); statusPatchErr != nil {
+		fmt.Printf("%s Warning: Failed to patch status after successful provisioning: %v. Requeuing...\n", logPrefix, statusPatchErr)
+
+		return statusPatchErr
+	}
+
+	fmt.Printf("%s Normal reconciliation complete and status updated.\n", logPrefix)
 
 	return nil
 }
@@ -580,25 +646,34 @@ func setupInformer(client dynamic.Interface, gvr schema.GroupVersionResource, co
 
 	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
-			log.Printf("\n--- %s ADD EVENT DETECTED ---\n", controller.gvr.Resource)
-			if err := controller.Reconcile(obj); err != nil {
-				log.Printf("ERROR in %s AddFunc reconciliation: %v\n", controller.gvr.Resource, err)
+			key, err := cache.MetaNamespaceKeyFunc(obj)
+			if err == nil {
+				fmt.Printf("\n--- %s ADD EVENT DETECTED. Queuing %s ---\n", controller.gvr.Resource, key)
+				controller.Queue.Add(key)
 			}
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
-			log.Printf("\n--- %s UPDATE EVENT DETECTED ---\n", controller.gvr.Resource)
-			if err := controller.Reconcile(newObj); err != nil {
-				log.Printf("ERROR in %s UpdateFunc reconciliation: %v\n", controller.gvr.Resource, err)
+			key, err := cache.MetaNamespaceKeyFunc(newObj)
+			if err == nil {
+				fmt.Printf("\n--- %s UPDATE EVENT DETECTED. Queuing %s ---\n", controller.gvr.Resource, key)
+				controller.Queue.Add(key)
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
-			log.Printf("\n--- %s DELETE EVENT DETECTED (Final Removal) ---\n", controller.gvr.Resource)
+			key, err := cache.MetaNamespaceKeyFunc(obj)
+			if err == nil {
+				// Deletion processing is essential for cleanup if the finalizer was removed externally.
+				fmt.Printf("\n--- %s DELETE EVENT DETECTED. Queuing %s ---\n", controller.gvr.Resource, key)
+				controller.Queue.Add(key)
+			}
 		},
 	})
 	return informer
 }
 
 func main() {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	var namespaces StringSlice
 	flag.Var(&namespaces, "blocked-ns", "blocked namespaces , these namespaces will not be allowed as argo namespace options in the CR(can be specified multiple times)")
 	resync := flag.Int("resync-period", 60, "time in seconds")
@@ -626,28 +701,33 @@ func main() {
 		panic(err.Error())
 	}
 
+	rateLimiter := workqueue.NewItemExponentialFailureRateLimiter(time.Second, 60*time.Second)
 	argoClusterGVR := schema.GroupVersionResource{Group: "field.vmware.com", Version: "v1", Resource: "argoclusters"}
 	argoClusterFinalizer := "field.vmware.com/argo-attach-cluster-cleanup"
 
 	argoClusterController := &Controller{
-		client:        dynClient,
-		gvr:           argoClusterGVR,
-		finalizerName: argoClusterFinalizer,
-		provisionFunc: applyArgoCluster,
-		cleanupFunc:   deleteClusterCleanup,
-		namespaces:    namespaces,
+		client:           dynClient,
+		gvr:              argoClusterGVR,
+		finalizerName:    argoClusterFinalizer,
+		provisionFunc:    applyArgoCluster,
+		cleanupFunc:      deleteClusterCleanup,
+		updateStatusFunc: updateGenericStatus,
+		namespaces:       namespaces,
+		Queue:            workqueue.NewRateLimitingQueue(rateLimiter),
 	}
 
 	argoNamespaceGVR := schema.GroupVersionResource{Group: "field.vmware.com", Version: "v1", Resource: "argonamespaces"}
 	argoNamespaceFinalizer := "field.vmware.com/argo-attach-ns-cleanup"
 
 	argoNamespaceController := &Controller{
-		client:        dynClient,
-		gvr:           argoNamespaceGVR,
-		finalizerName: argoNamespaceFinalizer,
-		provisionFunc: applyArgoNamespace,
-		cleanupFunc:   deleteNamespaceCleanup,
-		namespaces:    []string{},
+		client:           dynClient,
+		gvr:              argoNamespaceGVR,
+		finalizerName:    argoNamespaceFinalizer,
+		provisionFunc:    applyArgoNamespace,
+		cleanupFunc:      deleteNamespaceCleanup,
+		updateStatusFunc: updateGenericStatus,
+		namespaces:       []string{},
+		Queue:            workqueue.NewRateLimitingQueue(rateLimiter),
 	}
 
 	clusterInformer := setupInformer(dynClient, argoClusterController.gvr, argoClusterController, resyncPeriod)
@@ -665,5 +745,10 @@ func main() {
 	}
 	fmt.Println("Argo Cluster Controller started successfully")
 
-	<-stop
+	go argoClusterController.Run(ctx, numWorkers)
+	go argoNamespaceController.Run(ctx, numWorkers)
+
+	// Block main function until context is cancelled
+	<-ctx.Done()
+	fmt.Println("Shutting down controller.")
 }

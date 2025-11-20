@@ -30,6 +30,22 @@ spec:
                 - clusterName
                 - argoNamespace
                 - project
+            status: 
+              type: object
+              description: Current status of the Argonamespace.
+              x-kubernetes-preserve-unknown-fields: true 
+              properties:
+                state:
+                  type: string
+                message:
+                  type: string
+                ready:
+                  type: boolean
+                lastUpdated:
+                  type: string
+                  format: date-time
+      subresources:
+        status: {}
   scope: Namespaced
   names:
     plural: argoclusters
@@ -71,6 +87,22 @@ spec:
               required:
                 - argoNamespace
                 - project
+            status: 
+              type: object
+              description: Current status of the Argonamespace.
+              x-kubernetes-preserve-unknown-fields: true 
+              properties:
+                state:
+                  type: string
+                message:
+                  type: string
+                ready:
+                  type: boolean
+                lastUpdated:
+                  type: string
+                  format: date-time
+      subresources:
+        status: {}
   scope: Namespaced
   names:
     plural: argonamespaces
