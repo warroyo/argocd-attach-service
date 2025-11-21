@@ -1,10 +1,11 @@
 apiVersion: field.vmware.com/v1
-kind: ArgoCluster
+kind: ArgoNamespace
 metadata:
-  name: sample-cluster
+  name: sample-ns
 spec:
-  clusterName: "sample-cluster"
   argoNamespace: "argocd"
+  serviceAccount: "" # optionally use existing SA
   clusterLabels:
     test: "test"
+    test2: "test3"
   project: default

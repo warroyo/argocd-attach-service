@@ -1,9 +1,0 @@
-apiVersion: data.packaging.carvel.dev/v1alpha1
-kind: PackageMetadata
-metadata:
-  creationTimestamp: null
-  name: argocd-attach.fling.vsphere.vmware.com
-spec:
-  displayName: ArgoCD Attach Service
-  longDescription: Provides the ability to auto attach clusters to ArgoCD
-  shortDescription: ArgoCD Auto Attach
