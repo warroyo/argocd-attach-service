@@ -79,7 +79,7 @@ spec:
 ```
 
 
-### ArgoCluster
+### ArgoNamespace
 
 this is a sample CRD that handles adding supervisor namespaces to ArgoCD
 
