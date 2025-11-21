@@ -6,12 +6,10 @@ on:
       - 'v*'
   workflow_dispatch:
 
-permissions:
-  contents: write
-  packages: write
 
 jobs:
   build-and-release:
+    permissions: write-all
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
