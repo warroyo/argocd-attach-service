@@ -15,6 +15,23 @@ The `ArgoNamespace` CRD can be created in any supervisor namespace. It will eith
 
 ## Install
 
+### CLI
+
+Ensure you have the GOVC cli installed and connected to your vCenter, follow docs [here](https://github.com/vmware/govmomi/tree/main/govc).
+
+1. download the latest release
+
+```bash
+curl -LO https://github.com/warroyo/argocd-attach-service/releases/download/v3.0.1/argo-attach.yml 
+```
+
+2. create the service
+
+```bash
+govc namespace.service.create
+
+### UI 
+
 1. login into VCenter and go to the worload management->services page
 2. add a new service and upload the argo-attach.yml, this can be pulled from the releases
 3. add any additional values that are needed. see the values section below.

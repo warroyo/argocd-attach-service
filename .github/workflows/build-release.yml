@@ -33,7 +33,8 @@ jobs:
       - name: Set Version
         run: |
           if [[ $GITHUB_REF == refs/tags/* ]]; then
-            echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+            TAG=${GITHUB_REF#refs/tags/}
+            echo "VERSION=${TAG#v}" >> $GITHUB_ENV
           else
             echo "VERSION=latest" >> $GITHUB_ENV
           fi
