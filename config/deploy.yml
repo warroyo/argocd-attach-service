@@ -39,7 +39,10 @@ metadata:
   name: argoattach
 rules:
   - apiGroups: [""]
-    resources: ["secrets"]
+    resources: ["secrets","serviceaccounts"]
+    verbs: ["*"]
+  - apiGroups: ["rbac.authorization.k8s.io"]
+    resources: ["rolebindings"]
     verbs: ["*"]
   - apiGroups: ["field.vmware.com"]  
     resources: ["argoclusters","argonamespaces"]    
