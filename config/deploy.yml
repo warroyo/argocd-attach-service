@@ -42,7 +42,7 @@ rules:
     resources: ["secrets"]
     verbs: ["*"]
   - apiGroups: ["field.vmware.com"]  
-    resources: ["argoclusters"]    
+    resources: ["argoclusters","argonamespaces"]    
     verbs: ["get", "list", "watch"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -67,7 +67,7 @@ metadata:
     rbac.authorization.k8s.io/aggregate-to-edit: "true"
 rules:
 - apiGroups: ["field.vmware.com"]
-  resources: ["argoclusters"]
+  resources: ["argoclusters","argonamespaces"] 
   verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
 ---
 kind: ClusterRole
@@ -78,5 +78,5 @@ metadata:
     rbac.authorization.k8s.io/aggregate-to-view: "true"
 rules:
 - apiGroups: ["field.vmware.com"]
-  resources: ["argoclusters"]
+  resources: ["argoclusters","argonamespaces"]  
   verbs: ["get", "list", "watch"]
