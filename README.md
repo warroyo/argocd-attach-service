@@ -1,4 +1,4 @@
-# ArgoCD auto Attach Service
+# ArgoCD Auto Attach Service
 
 ![Release Status](https://github.com/warroyo/argocd-attach-service/actions/workflows/build-release.yml/badge.svg)
 
@@ -32,13 +32,13 @@ The `ArgoNamespace` CRD can be created in any supervisor namespace. It will eith
 
 ## AirGap Install
 
-1. relocate the image bundle to you repository, grab the latest imaeg bundle from the `argo-atatch.yml`
+1. relocate the image bundle to you repository, grab the latest imaeg bundle from the `argo-attach.yml`
 
 ```bash
 imgpkg copy -b <latest bundle from argo-attach.yml> --to-repo your-repo.com/argocd-auto-attach
 ```
 
-2. replace the image bundle in the `argo-atatch.yml` with your new path to the image bundle. the SHA should still be the same so all you should need to replace is the `ghcr.io/warroyo/argocd-auto-attach` with your repo and path.
+2. replace the image bundle in the `argo-attach.yml` with your new path to the image bundle. the SHA should still be the same so all you should need to replace is the `ghcr.io/warroyo/argocd-auto-attach` with your repo and path.
 
 3. follow the steps to install in the previosu step. 
 
