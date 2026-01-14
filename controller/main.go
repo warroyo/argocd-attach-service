@@ -518,7 +518,13 @@ type: kubernetes.io/service-account-token
 	if returnToken == "" {
 		return "", fmt.Errorf("unable to retrieve token value after waitng 10s")
 	}
-	return returnToken, nil
+	decodedBytes, err := base64.StdEncoding.DecodeString(returnToken)
+	if err != nil {
+		log.Printf("decode error: %v", err)
+		return "", err
+	}
+	decodedToken := string(decodedBytes)
+	return decodedToken, nil
 }
 
 func (c *Controller) Reconcile(obj interface{}) (reconcileResult error) {
