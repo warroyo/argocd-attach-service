@@ -282,7 +282,7 @@ func applyArgoCluster(client *dynamic.DynamicClient, obj interface{}, namespaces
 		"name":             clusterName,
 		"server":           config.Clusters[clusterName].Server,
 		"clusterresources": "true",
-		"prject":           project,
+		"project":          project,
 		"config":           string(jsonConfig),
 	}
 
@@ -312,7 +312,7 @@ func applySecret(client *dynamic.DynamicClient, argoCluster *ArgoCluster, secret
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      secretName,
 			Namespace: argoNamespace,
-			Labels:    map[string]string{"argocd.argoproj.io/secret-type": "cluster"},
+			Labels:    labels,
 		},
 		StringData: secretData,
 		Type:       corev1.SecretTypeOpaque,
