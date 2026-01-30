@@ -25,7 +25,8 @@ spec:
                 clusterLabels:
                   type: object
                   description: map of keys/values that are added to the labels in argocd for the cluster
-                  additionalProperties: true
+                  additionalProperties:
+                    type: string
               required:
                 - clusterName
                 - argoNamespace
@@ -33,7 +34,6 @@ spec:
             status: 
               type: object
               description: Current status of the Argonamespace.
-              x-kubernetes-preserve-unknown-fields: true 
               properties:
                 state:
                   type: string
@@ -83,14 +83,14 @@ spec:
                 clusterLabels:
                   type: object
                   description: map of keys/values that are added to the labels in argocd for the cluster
-                  additionalProperties: true
+                  additionalProperties:
+                    type: string
               required:
                 - argoNamespace
                 - project
             status: 
               type: object
               description: Current status of the Argonamespace.
-              x-kubernetes-preserve-unknown-fields: true 
               properties:
                 state:
                   type: string
