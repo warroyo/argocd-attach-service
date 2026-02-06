@@ -674,12 +674,17 @@ func setupInformer(client dynamic.Interface, gvr schema.GroupVersionResource, co
 
 			generationChanged := oldU.GetGeneration() != newU.GetGeneration()
 			deletionRequested := !newU.GetDeletionTimestamp().IsZero()
-			if generationChanged || deletionRequested {
+
+			isResync := oldU.GetResourceVersion() == newU.GetResourceVersion()
+
+			if generationChanged || deletionRequested || isResync {
 				key, err := cache.MetaNamespaceKeyFunc(newObj)
 				if err == nil {
 					reason := "Generation changed"
 					if deletionRequested {
 						reason = "Deletion requested"
+					} else if isResync {
+						reason = "Resync/Periodic Reconcile"
 					}
 					fmt.Printf("\n--- %s UPDATE EVENT DETECTED (%s). Queuing %s ---\n", controller.gvr.Resource, reason, key)
 					controller.Queue.Add(key)
