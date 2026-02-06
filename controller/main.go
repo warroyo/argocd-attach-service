@@ -299,6 +299,9 @@ func applyArgoCluster(client *dynamic.DynamicClient, obj interface{}, namespaces
 
 func applySecret(client *dynamic.DynamicClient, argoCluster *ArgoCluster, secretData map[string]string) error {
 	labels := argoCluster.Spec.ClusterLabels
+	if labels == nil {
+		labels = make(map[string]string)
+	}
 	clusterName := argoCluster.Spec.ClusterName
 	argoNamespace := argoCluster.Spec.ArgoNamespace
 	labels["argocd.argoproj.io/secret-type"] = "cluster"
