@@ -88,14 +88,14 @@ type ArgoCluster struct {
 type ArgoNamespaceSpec struct {
 	ClusterName    string            `json:"clusterName"`
 	ArgoNamespace  string            `json:"argoNamespace"`
-	ClusterLabels  map[string]string `json:"clusterLabels,omitempty"`
+	ClusterLabels  map[string]string `json:"clusterLabels"`
 	Project        string            `json:"project"`
 	ServiceAccount string            `json:"serviceAccount"`
 }
 type ArgoClusterSpec struct {
 	ClusterName   string            `json:"clusterName"`
 	ArgoNamespace string            `json:"argoNamespace"`
-	ClusterLabels map[string]string `json:"clusterLabels,omitempty"`
+	ClusterLabels map[string]string `json:"clusterLabels"`
 	Project       string            `json:"project"`
 }
 
@@ -194,7 +194,7 @@ func applyArgoNamespace(client *dynamic.DynamicClient, obj interface{}, namespac
 
 	secretData := map[string]string{
 		"name":       clusterName,
-		"server":     "https://kubernetes.default.svc.cluster.local:443",
+		"server":     "https://kubernetes.default.svc.cluster.local:443/?context=" + argoNs.Namespace,
 		"project":    project,
 		"config":     string(jsonConfig),
 		"namespaces": string(argoNs.Namespace),
