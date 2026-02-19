@@ -368,7 +368,7 @@ func deleteNamespaceCleanup(client *dynamic.DynamicClient, obj interface{}) erro
 	saToken := fmt.Sprintf("%s-token", saName)
 
 	err = client.Resource(secretGVR).Namespace(namespace).Delete(context.TODO(), saToken, metav1.DeleteOptions{})
-	if err != nil {
+	if err != nil && !apierrors.IsNotFound(err) {
 		log.Printf("unable to delete argo svc account token secret %v", err)
 		return err
 	}
@@ -377,7 +377,7 @@ func deleteNamespaceCleanup(client *dynamic.DynamicClient, obj interface{}) erro
 	if argoNs.Spec.ServiceAccount == "" {
 		log.Printf("not using existing service account,cleaning up role and sa")
 		err = client.Resource(saGVR).Namespace(namespace).Delete(context.TODO(), saName, metav1.DeleteOptions{})
-		if err != nil {
+		if err != nil && !apierrors.IsNotFound(err) {
 			log.Printf("unable to delete argo svc account %v", err)
 			return err
 		}
@@ -385,7 +385,7 @@ func deleteNamespaceCleanup(client *dynamic.DynamicClient, obj interface{}) erro
 
 		//role binding
 		err = client.Resource(rbGVR).Namespace(namespace).Delete(context.TODO(), saName, metav1.DeleteOptions{})
-		if err != nil {
+		if err != nil && !apierrors.IsNotFound(err) {
 			log.Printf("unable to delete argo svc account role binding %v", err)
 			return err
 		}
@@ -402,7 +402,7 @@ func deleteNamespaceCleanup(client *dynamic.DynamicClient, obj interface{}) erro
 func deleteSecret(client *dynamic.DynamicClient, namespace string, secretName string) error {
 
 	err := client.Resource(secretGVR).Namespace(namespace).Delete(context.TODO(), secretName, metav1.DeleteOptions{})
-	if err != nil {
+	if err != nil && !apierrors.IsNotFound(err) {
 		log.Printf("unable to delete argo cluster secret %v", err)
 		return err
 	}
