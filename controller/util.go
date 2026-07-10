@@ -43,6 +43,32 @@ func convertNs(obj any) (ArgoNamespace, error) {
 	return argoNs, nil
 }
 
+func convertRemoteNs(obj any) (RemoteNamespace, error) {
+	remoteNs := RemoteNamespace{}
+	unstructuredObj, ok := obj.(*unstructured.Unstructured)
+	if !ok {
+		return remoteNs, fmt.Errorf("unable to convert to unstuctured object")
+	}
+	err := runtime.DefaultUnstructuredConverter.FromUnstructured(unstructuredObj.Object, &remoteNs)
+	if err != nil {
+		return remoteNs, err
+	}
+	return remoteNs, nil
+}
+
+func convertAuthority(obj any) (ArgoAttachAuthority, error) {
+	authority := ArgoAttachAuthority{}
+	unstructuredObj, ok := obj.(*unstructured.Unstructured)
+	if !ok {
+		return authority, fmt.Errorf("unable to convert to unstuctured object")
+	}
+	err := runtime.DefaultUnstructuredConverter.FromUnstructured(unstructuredObj.Object, &authority)
+	if err != nil {
+		return authority, err
+	}
+	return authority, nil
+}
+
 func toUnstructured(obj interface{}) (*unstructured.Unstructured, error) {
 	if runtimeObj, ok := obj.(runtime.Object); ok {
 		return runtimeObj.(*unstructured.Unstructured), nil
