@@ -1055,9 +1055,13 @@ func setupInformer(client dynamic.Interface, gvr schema.GroupVersionResource, co
 	return informer
 }
 
-// getOwnNamespace returns the namespace this controller runs in when in-cluster,
-// or an empty string when running locally.
+// getOwnNamespace returns the namespace this controller runs in: the
+// POD_NAMESPACE env var if set (downward API / local testing), otherwise the
+// service account mount when in-cluster, otherwise an empty string.
 func getOwnNamespace() string {
+	if ns := os.Getenv("POD_NAMESPACE"); ns != "" {
+		return ns
+	}
 	data, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
 	if err != nil {
 		return ""
@@ -1071,12 +1075,16 @@ func main() {
 	var namespaces StringSlice
 	flag.Var(&namespaces, "blocked-ns", "blocked namespaces , these namespaces will not be allowed as argo namespace options in the CR(can be specified multiple times)")
 	resync := flag.Int("resync-period", 60, "time in seconds")
-	resyncPeriod := time.Duration(*resync) * time.Second
 
 	flag.Parse() // parse flags
 
+	resyncPeriod := time.Duration(*resync) * time.Second
+
 	var kubeconfig string
-	if home := homedir.HomeDir(); home != "" {
+	if envPath := os.Getenv("KUBECONFIG"); envPath != "" {
+		fmt.Println("using kubeconfig from KUBECONFIG env var")
+		kubeconfig = envPath
+	} else if home := homedir.HomeDir(); home != "" {
 		fmt.Println("using local kubeconfig")
 		kubeconfig = filepath.Join(home, ".kube", "config")
 	}

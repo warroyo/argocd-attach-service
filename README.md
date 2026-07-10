@@ -210,6 +210,21 @@ kubectl get remotenamespace <name> -n <namespace> -o jsonpath='{.status}'
 
 ## Development
 
+### Testing
+
+No supervisor or ArgoCD needed — the controller's output is plain Kubernetes objects, so the whole suite runs against a local [kind](https://kind.sigs.k8s.io/) cluster.
+
+```bash
+make test-unit   # go vet + unit tests for the gate/naming functions
+make test-e2e    # full kind-based suite (requires kind, kubectl, ytt, go)
+```
+
+The e2e suite runs the controller via `go run`, but authenticated **as the `argoattach` service account** (token minted per run) — every API call is authorized against the real ClusterRole from `config/deploy.yml`, so a missing RBAC rule fails the suite with `Forbidden` just like it would in a real deployment. It covers all reconcile gates, the cleanup guard, local/remote coexistence, namespace-recreation (UID) pinning, detach, the ArgoCluster kubeconfig flow (the kind cluster mocks its own workload cluster), blocked-namespace enforcement, and the RBAC boundaries via impersonation.
+
+Debugging: `test/e2e.sh --keep` leaves the kind cluster and controller running on failure; the harness prints the controller log on any failed assertion. Both jobs run in GitHub Actions on every PR (`.github/workflows/test.yml`).
+
+Still requires a real supervisor to verify: the exact SSO subject strings for `admin_sso_groups`, supervisor admin role behavior, the `?context=<ns>` server URL semantics, and the in-cluster startup paths.
+
 ### Releasing
 
 Push a `v*` tag — GitHub Actions does the rest.

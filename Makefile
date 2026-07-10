@@ -1,3 +1,8 @@
+test-unit:
+	cd controller && go vet ./... && go test ./...
+test-e2e:
+	test/e2e.sh
+
 # Build/Release package configuration
 release:
 	cp controller/manifests/crd.yml config/crd.yml

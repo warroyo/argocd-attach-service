@@ -1,0 +1,4 @@
+#@data/values
+---
+namespace: argo-attach-e2e-system
+blocked_namespaces: ["blocked-ns-test"]
