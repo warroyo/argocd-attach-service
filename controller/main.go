@@ -2,14 +2,18 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
 	"os"
+	"path"
 	"path/filepath"
 	"slices"
+	"strings"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -49,6 +53,36 @@ var rbGVR = schema.GroupVersionResource{
 	Resource: "rolebindings",
 }
 
+var nsGVR = schema.GroupVersionResource{
+	Group:    "",
+	Version:  "v1",
+	Resource: "namespaces",
+}
+
+var authorityGVR = schema.GroupVersionResource{
+	Group:    "field.vmware.com",
+	Version:  "v1",
+	Resource: "argoattachauthorities",
+}
+
+var remoteNsGVR = schema.GroupVersionResource{
+	Group:    "field.vmware.com",
+	Version:  "v1",
+	Resource: "remotenamespaces",
+}
+
+// namespaces that can never be attached, regardless of any ArgoAttachAuthority
+var protectedNamespaces = []string{"kube-system", "kube-public", "kube-node-lease"}
+var protectedPrefixes = []string{"vmware-system-", "svc-"}
+
+// the namespace this controller runs in, read from the service account mount at startup
+var controllerNamespace string
+
+// field manager for the provision inventory recorded in RemoteNamespace status.
+// This is deliberately different from StatusFieldManager so the generic
+// state/message/ready patches never prune the inventory fields.
+const inventoryFieldManager = "argo-attach-inventory"
+
 type StringSlice []string
 
 func (s *StringSlice) String() string {
@@ -85,12 +119,39 @@ type ArgoCluster struct {
 	Spec              *ArgoClusterSpec `json:"spec,omitempty"`
 }
 
+type RemoteNamespace struct {
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+	Spec              *RemoteNamespaceSpec   `json:"spec,omitempty"`
+	Status            *RemoteNamespaceStatus `json:"status,omitempty"`
+}
+
+type ArgoAttachAuthority struct {
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+	Spec              *ArgoAttachAuthoritySpec `json:"spec,omitempty"`
+}
+
 type ArgoNamespaceSpec struct {
 	ClusterName    string            `json:"clusterName"`
 	ArgoNamespace  string            `json:"argoNamespace"`
 	ClusterLabels  map[string]string `json:"clusterLabels"`
 	Project        string            `json:"project"`
 	ServiceAccount string            `json:"serviceAccount"`
+}
+
+type RemoteNamespaceSpec struct {
+	TargetNamespace string            `json:"targetNamespace"`
+	Project         string            `json:"project"`
+	ClusterLabels   map[string]string `json:"clusterLabels"`
+}
+
+type RemoteNamespaceStatus struct {
+	AttachedNamespaceUID string `json:"attachedNamespaceUID,omitempty"`
+	ServiceAccount       string `json:"serviceAccount,omitempty"`
+}
+
+type ArgoAttachAuthoritySpec struct {
+	Namespace      string   `json:"namespace"`
+	AllowedTargets []string `json:"allowedTargets"`
 }
 type ArgoClusterSpec struct {
 	ClusterName   string            `json:"clusterName"`
@@ -158,12 +219,16 @@ func applyArgoNamespace(client *dynamic.DynamicClient, obj interface{}, namespac
 	clusterName := fmt.Sprintf("supervisor-ns-%s", argoNs.Namespace)
 	argoNs.Spec.ClusterName = clusterName
 	project := argoNs.Spec.Project
-	//do validation[TODO]
+
+	if slices.Contains(namespaces, argoNs.Spec.ArgoNamespace) {
+		log.Printf("argoNamespace is in the list of blocked namespaces, not creating secret: %v", namespaces)
+		return fmt.Errorf("argoNamespace is in the list of blocked namespaces, not creating secret: %v", namespaces)
+	}
 
 	//create the necessary svc account etc.
 	token := ""
 	if argoNs.Spec.ServiceAccount == "" {
-		token, err = createArgoSvcAccount(client, &argoNs)
+		token, err = createArgoSvcAccount(client, argoNs.Namespace, "argo-attach-sa")
 		if err != nil {
 			log.Printf("unable to create svc account for %s: %v", argoNs.Name, err)
 			return fmt.Errorf("unable to create svc account for %s: %v", argoNs.Name, err)
@@ -217,6 +282,292 @@ func applyArgoNamespace(client *dynamic.DynamicClient, obj interface{}, namespac
 	secretName := fmt.Sprintf("%s-argo-cluster", clusterName)
 	log.Printf("succesfully created or update argo cluster secret %s", secretName)
 
+	return nil
+}
+
+// listAuthorities returns all well-formed ArgoAttachAuthority objects. Authorities
+// with an empty spec.namespace are skipped so an empty string can never designate.
+func listAuthorities(client *dynamic.DynamicClient) ([]ArgoAttachAuthority, error) {
+	list, err := client.Resource(authorityGVR).List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+	authorities := make([]ArgoAttachAuthority, 0, len(list.Items))
+	for i := range list.Items {
+		authority, err := convertAuthority(&list.Items[i])
+		if err != nil {
+			log.Printf("skipping malformed ArgoAttachAuthority %s: %v", list.Items[i].GetName(), err)
+			continue
+		}
+		if authority.Spec == nil || authority.Spec.Namespace == "" {
+			continue
+		}
+		authorities = append(authorities, authority)
+	}
+	return authorities, nil
+}
+
+func findAuthority(authorities []ArgoAttachAuthority, namespace string) *ArgoAttachAuthority {
+	for i := range authorities {
+		if authorities[i].Spec.Namespace == namespace {
+			return &authorities[i]
+		}
+	}
+	return nil
+}
+
+func designatedNamespaces(authorities []ArgoAttachAuthority) []string {
+	designated := make([]string, 0, len(authorities))
+	for _, authority := range authorities {
+		designated = append(designated, authority.Spec.Namespace)
+	}
+	return designated
+}
+
+// matchTargets reports whether target matches any entry in patterns, either
+// exactly or as a shell glob. Empty patterns never match.
+func matchTargets(patterns []string, target string) bool {
+	for _, pattern := range patterns {
+		if pattern == "" {
+			continue
+		}
+		if pattern == target {
+			return true
+		}
+		if ok, err := path.Match(pattern, target); err == nil && ok {
+			return true
+		}
+	}
+	return false
+}
+
+// checkDenylistFloor rejects targets that must never be attached regardless of
+// what any ArgoAttachAuthority allows.
+func checkDenylistFloor(target string, ownNs string, designated []string, blocked []string) error {
+	if target == "" {
+		return fmt.Errorf("targetNamespace is empty")
+	}
+	if slices.Contains(protectedNamespaces, target) {
+		return fmt.Errorf("target namespace %q is a protected system namespace and can never be attached", target)
+	}
+	for _, prefix := range protectedPrefixes {
+		if strings.HasPrefix(target, prefix) {
+			return fmt.Errorf("target namespace %q matches protected prefix %q and can never be attached", target, prefix)
+		}
+	}
+	if target == ownNs {
+		return fmt.Errorf("target namespace %q is the RemoteNamespace's own namespace and cannot be attached to itself", target)
+	}
+	if controllerNamespace != "" && target == controllerNamespace {
+		return fmt.Errorf("target namespace %q is the controller's namespace and can never be attached", target)
+	}
+	if slices.Contains(designated, target) {
+		return fmt.Errorf("target namespace %q is designated as an argo attach authority namespace and can never be attached", target)
+	}
+	if slices.Contains(blocked, target) {
+		return fmt.Errorf("target namespace %q is in the list of blocked namespaces", target)
+	}
+	return nil
+}
+
+// remoteSAName derives the per-source service account name for a remote attach so
+// that a local ArgoNamespace attach and remote attaches from multiple ArgoCD
+// instances can coexist in one target namespace. Capped so the "-token" secret
+// suffix still fits within the 63 character DNS-1123 limit.
+func remoteSAName(argoNamespace string) string {
+	name := fmt.Sprintf("argo-attach-%s", argoNamespace)
+	const maxLen = 57
+	if len(name) > maxLen {
+		hash := sha256.Sum256([]byte(name))
+		name = fmt.Sprintf("%s-%s", name[:maxLen-9], hex.EncodeToString(hash[:])[:8])
+	}
+	return name
+}
+
+// recordRemoteInventory stores what provisioning created in the RemoteNamespace
+// status under a dedicated field manager, so the generic status patches never
+// prune it. Cleanup only deletes what this inventory says was provisioned.
+func recordRemoteInventory(client *dynamic.DynamicClient, namespace string, name string, uid string, saName string) error {
+	statusObj := &unstructured.Unstructured{Object: map[string]interface{}{
+		"apiVersion": "field.vmware.com/v1",
+		"kind":       "RemoteNamespace",
+		"metadata": map[string]interface{}{
+			"name":      name,
+			"namespace": namespace,
+		},
+		"status": map[string]interface{}{
+			"attachedNamespaceUID": uid,
+			"serviceAccount":       saName,
+		},
+	}}
+	_, err := client.Resource(remoteNsGVR).Namespace(namespace).ApplyStatus(context.TODO(), name, statusObj, metav1.ApplyOptions{FieldManager: inventoryFieldManager, Force: true})
+	return err
+}
+
+func applyRemoteNamespace(client *dynamic.DynamicClient, obj interface{}, blocked []string) error {
+	u, err := toUnstructured(obj)
+	if err != nil {
+		return fmt.Errorf("error converting to unstructured: %w", err)
+	}
+	remoteNs, err := convertRemoteNs(obj)
+	if err != nil {
+		log.Printf("unable to convert object to structured remote namespace: %v", err)
+		return fmt.Errorf("conversion error: %w", err)
+	}
+
+	argoNamespace := remoteNs.Namespace
+	target := remoteNs.Spec.TargetNamespace
+
+	authorities, err := listAuthorities(client)
+	if err != nil {
+		log.Printf("unable to list argo attach authorities: %v", err)
+		return fmt.Errorf("unable to list argo attach authorities: %w", err)
+	}
+
+	// gate 1: the CR's own namespace must be designated by an ArgoAttachAuthority
+	authority := findAuthority(authorities, argoNamespace)
+	if authority == nil {
+		return fmt.Errorf("namespace %q is not designated by any ArgoAttachAuthority, refusing to attach", argoNamespace)
+	}
+
+	// gate 2: the target must be within the authority's allowed targets
+	if !matchTargets(authority.Spec.AllowedTargets, target) {
+		return fmt.Errorf("target namespace %q is not allowed by ArgoAttachAuthority %q allowedTargets", target, authority.Name)
+	}
+
+	// gate 3: the compiled-in denylist floor overrides any authority
+	if err := checkDenylistFloor(target, argoNamespace, designatedNamespaces(authorities), blocked); err != nil {
+		return err
+	}
+
+	// gate 4: the target must exist and must be the same namespace incarnation
+	// this CR originally attached (blocks silent re-attach after name reuse)
+	nsObj, err := client.Resource(nsGVR).Get(context.TODO(), target, metav1.GetOptions{})
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return fmt.Errorf("target namespace %q does not exist", target)
+		}
+		return fmt.Errorf("unable to get target namespace %q: %w", target, err)
+	}
+	liveUID := string(nsObj.GetUID())
+	recordedUID, _, _ := unstructured.NestedString(u.Object, "status", "attachedNamespaceUID")
+	if recordedUID != "" && recordedUID != liveUID {
+		return fmt.Errorf("target namespace %q was recreated since this attach (uid changed), delete and re-create this RemoteNamespace to re-attach", target)
+	}
+
+	saName := remoteSAName(argoNamespace)
+	token, err := createArgoSvcAccount(client, target, saName)
+	if err != nil {
+		log.Printf("unable to create svc account for %s: %v", remoteNs.Name, err)
+		return fmt.Errorf("unable to create svc account for %s: %v", remoteNs.Name, err)
+	}
+
+	clusterName := fmt.Sprintf("supervisor-ns-%s", target)
+	argoConfig := &ArgoConfig{
+		BearerToken: token,
+		TLSClientConfig: &TLSClientConfig{
+			Insecure: true,
+		},
+	}
+
+	jsonConfig, err := json.Marshal(argoConfig)
+	if err != nil {
+		log.Printf("unable to encoded argo config: %v", err)
+		return fmt.Errorf("unable to encoded argo config: %v", err)
+	}
+
+	secretData := map[string]string{
+		"name":       clusterName,
+		"server":     "https://kubernetes.default.svc.cluster.local:443/?context=" + target,
+		"project":    remoteNs.Spec.Project,
+		"config":     string(jsonConfig),
+		"namespaces": target,
+	}
+
+	cluster := &ArgoCluster{
+		ObjectMeta: remoteNs.ObjectMeta,
+		Spec: &ArgoClusterSpec{
+			ClusterName:   clusterName,
+			ArgoNamespace: argoNamespace,
+			ClusterLabels: remoteNs.Spec.ClusterLabels,
+			Project:       remoteNs.Spec.Project,
+		},
+	}
+	err = applySecret(client, cluster, secretData)
+	if err != nil {
+		log.Printf("unable to create or update argo cluster secret %v", err)
+		return fmt.Errorf("unable to create or update argo cluster secret %v", err)
+	}
+
+	if err := recordRemoteInventory(client, argoNamespace, remoteNs.Name, liveUID, saName); err != nil {
+		log.Printf("unable to record remote attach inventory for %s/%s: %v", argoNamespace, remoteNs.Name, err)
+		return fmt.Errorf("unable to record remote attach inventory: %w", err)
+	}
+
+	secretName := fmt.Sprintf("%s-argo-cluster", clusterName)
+	log.Printf("succesfully created or update argo cluster secret %s", secretName)
+	return nil
+}
+
+func deleteRemoteNamespaceCleanup(client *dynamic.DynamicClient, obj interface{}) error {
+	u, err := toUnstructured(obj)
+	if err != nil {
+		return err
+	}
+	remoteNs, err := convertRemoteNs(obj)
+	if err != nil {
+		log.Printf("unable to convert object to structured remote namespace: %v", err)
+		return err
+	}
+
+	argoNamespace := remoteNs.Namespace
+	target := remoteNs.Spec.TargetNamespace
+	clusterName := fmt.Sprintf("supervisor-ns-%s", target)
+	secretName := fmt.Sprintf("%s-argo-cluster", clusterName)
+
+	// only touch the target namespace if this CR actually provisioned there:
+	// the inventory is written exclusively by the controller on successful
+	// provision, so a never-provisioned CR (e.g. one that failed the gates)
+	// cannot tear down another attach's resources on deletion
+	recordedUID, _, _ := unstructured.NestedString(u.Object, "status", "attachedNamespaceUID")
+	saName, _, _ := unstructured.NestedString(u.Object, "status", "serviceAccount")
+	if recordedUID != "" && saName != "" {
+		nsObj, err := client.Resource(nsGVR).Get(context.TODO(), target, metav1.GetOptions{})
+		switch {
+		case apierrors.IsNotFound(err):
+			log.Printf("target namespace %s already deleted, skipping target cleanup", target)
+		case err != nil:
+			return fmt.Errorf("unable to get target namespace %q during cleanup: %w", target, err)
+		case string(nsObj.GetUID()) != recordedUID:
+			log.Printf("target namespace %s was recreated since this attach, skipping cleanup of resources that belong to a different incarnation", target)
+		default:
+			saToken := fmt.Sprintf("%s-token", saName)
+			err = client.Resource(secretGVR).Namespace(target).Delete(context.TODO(), saToken, metav1.DeleteOptions{})
+			if err != nil && !apierrors.IsNotFound(err) {
+				log.Printf("unable to delete argo svc account token secret %v", err)
+				return err
+			}
+			err = client.Resource(saGVR).Namespace(target).Delete(context.TODO(), saName, metav1.DeleteOptions{})
+			if err != nil && !apierrors.IsNotFound(err) {
+				log.Printf("unable to delete argo svc account %v", err)
+				return err
+			}
+			err = client.Resource(rbGVR).Namespace(target).Delete(context.TODO(), saName, metav1.DeleteOptions{})
+			if err != nil && !apierrors.IsNotFound(err) {
+				log.Printf("unable to delete argo svc account role binding %v", err)
+				return err
+			}
+			log.Printf("succesfully deleted remote attach svc account resources in %s", target)
+		}
+	} else {
+		log.Printf("remote namespace %s/%s was never provisioned, skipping target namespace cleanup", argoNamespace, remoteNs.Name)
+	}
+
+	err = deleteSecret(client, argoNamespace, secretName)
+	if err != nil {
+		log.Printf("unable to delete argo cluster secret %v", err)
+		return err
+	}
 	return nil
 }
 
@@ -410,10 +761,8 @@ func deleteSecret(client *dynamic.DynamicClient, namespace string, secretName st
 	return nil
 }
 
-func createArgoSvcAccount(client *dynamic.DynamicClient, details *ArgoNamespace) (string, error) {
-	namespace := details.ObjectMeta.Namespace
+func createArgoSvcAccount(client *dynamic.DynamicClient, namespace string, saName string) (string, error) {
 	sa := &unstructured.Unstructured{}
-	saName := "argo-attach-sa"
 	saYaml := fmt.Sprintf(`
 apiVersion: v1
 kind: ServiceAccount
@@ -515,7 +864,7 @@ type: kubernetes.io/service-account-token
 		}
 		time.Sleep(1 * time.Second)
 
-		tokenSecert, _ = client.Resource(secretGVR).Namespace(namespace).Get(context.TODO(), "argo-attach-sa-token", metav1.GetOptions{})
+		tokenSecert, _ = client.Resource(secretGVR).Namespace(namespace).Get(context.TODO(), secretName, metav1.GetOptions{})
 	}
 
 	if returnToken == "" {
@@ -706,18 +1055,36 @@ func setupInformer(client dynamic.Interface, gvr schema.GroupVersionResource, co
 	return informer
 }
 
+// getOwnNamespace returns the namespace this controller runs in: the
+// POD_NAMESPACE env var if set (downward API / local testing), otherwise the
+// service account mount when in-cluster, otherwise an empty string.
+func getOwnNamespace() string {
+	if ns := os.Getenv("POD_NAMESPACE"); ns != "" {
+		return ns
+	}
+	data, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(data))
+}
+
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	var namespaces StringSlice
 	flag.Var(&namespaces, "blocked-ns", "blocked namespaces , these namespaces will not be allowed as argo namespace options in the CR(can be specified multiple times)")
 	resync := flag.Int("resync-period", 60, "time in seconds")
-	resyncPeriod := time.Duration(*resync) * time.Second
 
 	flag.Parse() // parse flags
 
+	resyncPeriod := time.Duration(*resync) * time.Second
+
 	var kubeconfig string
-	if home := homedir.HomeDir(); home != "" {
+	if envPath := os.Getenv("KUBECONFIG"); envPath != "" {
+		fmt.Println("using kubeconfig from KUBECONFIG env var")
+		kubeconfig = envPath
+	} else if home := homedir.HomeDir(); home != "" {
 		fmt.Println("using local kubeconfig")
 		kubeconfig = filepath.Join(home, ".kube", "config")
 	}
@@ -735,6 +1102,8 @@ func main() {
 	if err != nil {
 		panic(err.Error())
 	}
+
+	controllerNamespace = getOwnNamespace()
 
 	rateLimiter := workqueue.NewItemExponentialFailureRateLimiter(time.Second, 60*time.Second)
 	argoClusterGVR := schema.GroupVersionResource{Group: "field.vmware.com", Version: "v1", Resource: "argoclusters"}
@@ -761,20 +1130,35 @@ func main() {
 		provisionFunc:    applyArgoNamespace,
 		cleanupFunc:      deleteNamespaceCleanup,
 		updateStatusFunc: updateGenericStatus,
-		namespaces:       []string{},
+		namespaces:       namespaces,
+		Queue:            workqueue.NewRateLimitingQueue(rateLimiter),
+	}
+
+	remoteNamespaceFinalizer := "field.vmware.com/remote-ns-cleanup"
+
+	remoteNamespaceController := &Controller{
+		client:           dynClient,
+		gvr:              remoteNsGVR,
+		finalizerName:    remoteNamespaceFinalizer,
+		provisionFunc:    applyRemoteNamespace,
+		cleanupFunc:      deleteRemoteNamespaceCleanup,
+		updateStatusFunc: updateGenericStatus,
+		namespaces:       namespaces,
 		Queue:            workqueue.NewRateLimitingQueue(rateLimiter),
 	}
 
 	clusterInformer := setupInformer(dynClient, argoClusterController.gvr, argoClusterController, resyncPeriod)
 	nsInformer := setupInformer(dynClient, argoNamespaceController.gvr, argoNamespaceController, resyncPeriod)
+	remoteNsInformer := setupInformer(dynClient, remoteNamespaceController.gvr, remoteNamespaceController, resyncPeriod)
 
 	stop := make(chan struct{})
 	defer close(stop)
 
 	go clusterInformer.Run(stop)
 	go nsInformer.Run(stop)
+	go remoteNsInformer.Run(stop)
 
-	if !cache.WaitForCacheSync(stop, clusterInformer.HasSynced, nsInformer.HasSynced) {
+	if !cache.WaitForCacheSync(stop, clusterInformer.HasSynced, nsInformer.HasSynced, remoteNsInformer.HasSynced) {
 		fmt.Fprintln(os.Stderr, "Error waiting for cache sync")
 		os.Exit(1)
 	}
@@ -782,6 +1166,7 @@ func main() {
 
 	go argoClusterController.Run(ctx, numWorkers)
 	go argoNamespaceController.Run(ctx, numWorkers)
+	go remoteNamespaceController.Run(ctx, numWorkers)
 
 	// Block main function until context is cancelled
 	<-ctx.Done()

@@ -1,0 +1,50 @@
+name: Test
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: controller/go.mod
+          cache-dependency-path: controller/go.sum
+
+      - name: Unit tests
+        run: make test-unit
+
+  e2e:
+    needs: unit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: controller/go.mod
+          cache-dependency-path: controller/go.sum
+
+      - name: Install kind
+        run: |
+          curl -sSLo kind https://kind.sigs.k8s.io/dl/v0.29.0/kind-linux-amd64
+          chmod +x kind && sudo mv kind /usr/local/bin/
+          kind version
+
+      - name: Install Carvel Tools
+        run: |
+          curl -L https://carvel.dev/install.sh | sudo bash
+          ytt version
+
+      - name: E2E tests
+        run: make test-e2e

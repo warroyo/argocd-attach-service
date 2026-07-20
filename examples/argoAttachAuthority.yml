@@ -1,0 +1,18 @@
+# designates an ArgoCD namespace as an attach authority. cluster-scoped and only
+# creatable by the SSO groups configured in admin_sso_groups at install time.
+apiVersion: field.vmware.com/v1
+kind: ArgoAttachAuthority
+metadata:
+  name: platform
+spec:
+  namespace: "argocd" # the namespace the ArgoCD instance runs in
+  allowedTargets: ["*"] # platform instance, may attach any non-protected namespace
+---
+# a bounded team instance: may only attach namespaces matching apps-*
+apiVersion: field.vmware.com/v1
+kind: ArgoAttachAuthority
+metadata:
+  name: team-apps
+spec:
+  namespace: "argocd-team-apps"
+  allowedTargets: ["apps-*"]

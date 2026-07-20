@@ -1,0 +1,17 @@
+# platform authority: may attach anything not on the denylist floor
+apiVersion: field.vmware.com/v1
+kind: ArgoAttachAuthority
+metadata:
+  name: platform
+spec:
+  namespace: argocd
+  allowedTargets: ["*"]
+---
+# bounded authority: may only attach team-b
+apiVersion: field.vmware.com/v1
+kind: ArgoAttachAuthority
+metadata:
+  name: bounded
+spec:
+  namespace: argocd-two
+  allowedTargets: ["team-b"]

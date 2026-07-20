@@ -1,0 +1,16 @@
+# simulates a supervisor namespace member: tenant-user holds edit in tenant-ns.
+# used by the RBAC test cases to prove RemoteNamespace is NOT creatable via the
+# edit aggregate while ArgoNamespace still is.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: tenant-user-edit
+  namespace: tenant-ns
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: edit
+subjects:
+- kind: User
+  apiGroup: rbac.authorization.k8s.io
+  name: tenant-user

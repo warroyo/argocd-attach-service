@@ -19,8 +19,7 @@ spec:
       containers:
       - name: controller
         image: controller
-        cmd: ["./main"]
-        args: 
+        args:
         - #@ "--resync-period=" + data.values.resync_period
         #@ for namespace in data.values.blocked_namespaces:
         - #@ "--blocked-ns=" + namespace
@@ -41,19 +40,27 @@ rules:
   - apiGroups: [""]
     resources: ["secrets","serviceaccounts"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: [""]
+    resources: ["namespaces"]
+    verbs: ["get", "list", "watch"]
   - apiGroups: ["rbac.authorization.k8s.io"]
     resources: ["rolebindings"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
   - apiGroups: ["rbac.authorization.k8s.io"]
     resources: ["clusterroles", "roles"]
     verbs: ["bind", "escalate"]
-  - apiGroups: ["field.vmware.com"]  
-    resources: 
+  - apiGroups: ["field.vmware.com"]
+    resources:
     - argoclusters
     - argonamespaces
+    - remotenamespaces
     - argonamespaces/status
-    - argoclusters/status    
+    - argoclusters/status
+    - remotenamespaces/status
     verbs: ["get", "list", "watch","update", "patch"]
+  - apiGroups: ["field.vmware.com"]
+    resources: ["argoattachauthorities"]
+    verbs: ["get", "list", "watch"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -88,5 +95,45 @@ metadata:
     rbac.authorization.k8s.io/aggregate-to-view: "true"
 rules:
 - apiGroups: ["field.vmware.com"]
-  resources: ["argoclusters","argonamespaces"]  
+  resources: ["argoclusters","argonamespaces","remotenamespaces"]
   verbs: ["get", "list", "watch"]
+---
+#! grants management of ArgoAttachAuthority resources to the configured supervisor
+#! admin SSO groups. supervisor built-in roles are enumerated and predate this CRD,
+#! so admins need this explicit grant to designate attach authorities.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: argoattachauthority-admin
+rules:
+- apiGroups: ["field.vmware.com"]
+  resources: ["argoattachauthorities"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: argoattachauthority-admins
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: argoattachauthority-admin
+subjects:
+#@ for group in data.values.admin_sso_groups:
+- kind: Group
+  apiGroup: rbac.authorization.k8s.io
+  name: #@ group
+#@ end
+---
+#! deliberately NOT aggregated into edit/admin: RemoteNamespace has no legitimate
+#! use outside namespaces designated by an ArgoAttachAuthority. bind this role via
+#! a RoleBinding in a designated namespace to that instance's ArgoCD service
+#! account (and/or platform operators) when onboarding an instance.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: remotenamespace-edit
+rules:
+- apiGroups: ["field.vmware.com"]
+  resources: ["remotenamespaces"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]

@@ -1,0 +1,15 @@
+# attaches a remote namespace to the ArgoCD instance running in this resource's
+# own namespace. must be created in a namespace designated by an
+# ArgoAttachAuthority, and the target must be within that authority's
+# allowedTargets.
+apiVersion: field.vmware.com/v1
+kind: RemoteNamespace
+metadata:
+  name: attach-team-a
+  namespace: argocd # the ArgoCD namespace, must be designated
+spec:
+  targetNamespace: team-a # the remote namespace to attach
+  clusterLabels:
+    test: "test"
+    test2: "test3"
+  project: default

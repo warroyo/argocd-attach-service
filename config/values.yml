@@ -4,3 +4,7 @@
 resync_period: "60"
 namespace: ""
 blocked_namespaces: [""]
+#! SSO groups allowed to create ArgoAttachAuthority resources, format "sso:<group>@<domain>".
+#! verify the exact subject string in your environment (e.g. kubectl get clusterrolebindings -o yaml | grep sso:)
+#@schema/default ["sso:Administrators@vsphere.local"]
+admin_sso_groups: [""]
