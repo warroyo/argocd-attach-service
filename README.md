@@ -1,5 +1,10 @@
 # ArgoCD Auto Attach Service
 
+> [!IMPORTANT]
+> Starting with ArgoCD Service 1.2.0 (released September 2026), the ArgoCD service includes a built-in [`ManagedEntity`](https://developer.broadcom.com/xapis/argocd-service-api/latest/api-docs.html#k8s-api-github-vcf-devops-broadcom-net-vcf-argocd-service-api-v1alpha1-managedentity) API that registers VKS clusters and supervisor namespaces with ArgoCD. This replaces the need for this service.
+>
+> Use `ManagedEntity` if your supervisor version supports ArgoCD Service 1.2.0. Check the [interoperability matrix](https://interopmatrix.broadcom.com/Interoperability?col=2509,&row=1378,&isHidePatch=false&isHideLegacyReleases=true) to confirm. Only use this service if you are on an older supervisor version that does not support 1.2.0.
+
 ![Release Status](https://github.com/warroyo/argocd-attach-service/actions/workflows/build-release.yml/badge.svg)
 
 Supervisor service that auto-registers workload clusters and namespaces with ArgoCD, whether at deploy time or after the fact. Pairs with the [ArgoCD supervisor service](https://vsphere-tmm.github.io/Supervisor-Services/#argocd-operator).
